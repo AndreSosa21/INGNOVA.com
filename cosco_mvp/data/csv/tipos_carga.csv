@@ -1,0 +1,8 @@
+id,nombre,certificacion_requerida,sensibilidad
+1,Contenedor seco,,0.04
+2,Contenedor refrigerado,Cadena de frío,0.25
+3,Carga suelta / paletizada,,0.1
+4,Carga extradimensionada,Permiso INVÍAS extradimensionada,0.12
+5,Mercancía peligrosa (IMO),Mercancía peligrosa,0.1
+6,Granel líquido,Mercancía peligrosa,0.08
+7,Alto valor,Escolta y GPS,0.15

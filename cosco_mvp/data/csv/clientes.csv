@@ -1,0 +1,46 @@
+id,nombre,sector,ciudad_id
+1,Ruiz PLC,Bebidas,15
+2,"Estrada, López and Torres",Automotriz,12
+3,"Trujillo, Salazar and Córdoba",Alimentos,8
+4,"Castaño, Rincón and Perdomo",Farmacéutico,17
+5,Moreno-Ávila,Minería,5
+6,Gutiérrez Inc,Bebidas,15
+7,Rodríguez-Naranjo,Retail,19
+8,Duarte-Rojas,Químicos,27
+9,Romero-Molano,Químicos,16
+10,Cifuentes-Anaya,Tecnología,3
+11,"Henao, Vanegas and López",Tecnología,12
+12,"Jiménez, Cruz and Pardo",Textil,8
+13,"Becerra, Álvarez and Miranda",Retail,5
+14,Morales-Salazar,Químicos,3
+15,Naranjo-Cortés,Retail,9
+16,Salazar PLC,Construcción,5
+17,Castillo-Silva,Construcción,8
+18,Ospina-Riascos,Construcción,5
+19,"Delgado, Rodríguez and Torres",Construcción,12
+20,Figueroa Ltd,Tecnología,8
+21,"Murcia, López and Trujillo",Flores,25
+22,Sánchez-Loaiza,Automotriz,17
+23,Pineda Group,Agroindustria,8
+24,"Correa, Oviedo and Ospino",Tecnología,28
+25,"Vargas, Castillo and Molano",Textil,12
+26,"Vera, Sierra and Acosta",Agroindustria,26
+27,Mejía-Jiménez,Alimentos,10
+28,Rodríguez-Sánchez,Químicos,8
+29,"Salamanca, Arenas and Carmona",Alimentos,10
+30,Cáceres-Muñoz,Químicos,5
+31,Correa-Castañeda,Agroindustria,2
+32,Montes-Velásquez,Construcción,5
+33,Serrano LLC,Retail,3
+34,Alarcón-López,Minería,15
+35,"Becerra, Burgos and Muñoz",Alimentos,12
+36,Parada Ltd,Farmacéutico,12
+37,Ballesteros-Bernal,Bebidas,9
+38,Arias-Ramírez,Construcción,2
+39,Sánchez-Alarcón,Flores,5
+40,Rodríguez PLC,Farmacéutico,17
+41,"Montenegro, García and Alzate",Bebidas,8
+42,González Inc,Agroindustria,3
+43,"Arteaga, Camacho and Acevedo",Químicos,27
+44,Rodríguez Ltd,Retail,24
+45,"Córdoba, Carmona and Estrada",Farmacéutico,8

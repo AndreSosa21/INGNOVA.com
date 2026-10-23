@@ -1,0 +1,82 @@
+{
+  "por_politica": {
+    "historica": {
+      "otd": 0.7858,
+      "exito": 0.6594,
+      "danos": 0.0108,
+      "costo_por_unidad": 9039764.0929,
+      "retraso_h": 2.8869,
+      "solicitudes": 1321.0
+    },
+    "mas_barata": {
+      "otd": 0.7685,
+      "exito": 0.6984,
+      "danos": 0.0112,
+      "costo_por_unidad": 8610994.5717,
+      "retraso_h": 3.2368,
+      "solicitudes": 1321.0
+    },
+    "mcdm_estatico": {
+      "otd": 0.8215,
+      "exito": 0.6952,
+      "danos": 0.0095,
+      "costo_por_unidad": 9001497.3536,
+      "retraso_h": 2.4642,
+      "solicitudes": 1321.0
+    },
+    "sistema": {
+      "otd": 0.801,
+      "exito": 0.7166,
+      "danos": 0.0095,
+      "costo_por_unidad": 9083906.0939,
+      "retraso_h": 2.7591,
+      "solicitudes": 1321.0
+    },
+    "oraculo": {
+      "otd": 0.8567,
+      "exito": 0.7855,
+      "danos": 0.0087,
+      "costo_por_unidad": 9328735.2984,
+      "retraso_h": 1.8731,
+      "solicitudes": 1321.0
+    }
+  },
+  "sistema_vs_historica": {
+    "otd_puntos": 1.5,
+    "exito_puntos": 5.7,
+    "costo_pct": 0.5,
+    "danos_pct": -12.3,
+    "retraso_promedio_h": -0.1,
+    "mejora_capturada_pct": 45.4
+  },
+  "por_perfil": {
+    "Costo": {
+      "historica": 0.732,
+      "mas_barata": 0.752,
+      "mcdm_estatico": 0.737,
+      "sistema": 0.768,
+      "oraculo": 0.823
+    },
+    "Critico": {
+      "historica": 0.681,
+      "mas_barata": 0.732,
+      "mcdm_estatico": 0.724,
+      "sistema": 0.744,
+      "oraculo": 0.813
+    },
+    "Equilibrado": {
+      "historica": 0.665,
+      "mas_barata": 0.705,
+      "mcdm_estatico": 0.702,
+      "sistema": 0.724,
+      "oraculo": 0.789
+    },
+    "Urgente": {
+      "historica": 0.584,
+      "mas_barata": 0.629,
+      "mcdm_estatico": 0.638,
+      "sistema": 0.652,
+      "oraculo": 0.738
+    }
+  }
+}
