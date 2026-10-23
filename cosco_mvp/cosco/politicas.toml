@@ -1,0 +1,48 @@
+# Reglas fijas de COSCO y parámetros del motor. Se cambian aquí, no en el código.
+# Los requisitos de cada solicitud (restricciones y preferencias) van en la tabla requisitos_solicitud.
+
+[perfiles]
+# Pesos por perfil (suman 1). Factores: precio, tiempo, confiabilidad, historial, holgura, segmento.
+Urgente     = { precio = 0.15, tiempo = 0.30, confiabilidad = 0.30, historial = 0.10, holgura = 0.05, segmento = 0.10 }
+Costo       = { precio = 0.40, tiempo = 0.10, confiabilidad = 0.20, historial = 0.10, holgura = 0.05, segmento = 0.15 }
+Critico     = { precio = 0.10, tiempo = 0.15, confiabilidad = 0.35, historial = 0.15, holgura = 0.05, segmento = 0.20 }
+Equilibrado = { precio = 0.25, tiempo = 0.20, confiabilidad = 0.25, historial = 0.10, holgura = 0.05, segmento = 0.15 }
+
+[prioridad_a_perfil]
+# Cómo se traduce solicitudes.prioridad al perfil de pesos
+"Tiempo" = "Urgente"
+"Costo" = "Costo"
+"Carga crítica" = "Critico"
+"Equilibrado" = "Equilibrado"
+
+[restricciones]
+prob_minima_plazo = 0.70        # una fecha límite se cumple si P(a tiempo) >= 70 %
+percentil_precio = 90           # un precio máximo se cumple si el costo P90 <= máximo
+dias_incidentes = 90            # ventana de "sin incidentes recientes"
+
+[montecarlo]
+escenarios = 5000
+k_encogimiento = 10             # mezcla con el mercado en proporción n / (n + k)
+vida_media_meses = 4            # peso de un viaje = 0,5 ^ (edad en meses / vida media)
+meses_lluvia = [4, 5, 10, 11]
+factor_lluvia = 1.6
+
+[bandido]
+peso_prior = 5                  # el promedio del mercado entra con el peso de 5 servicios
+vida_media_meses = 4
+banda_desempate = 0.05          # Thompson solo desempata a menos de 5 % del primero
+explorar_en_critico = false
+
+[semaforo]
+prob_tarde_max = 0.30
+prob_sobre_presupuesto_max = 0.30
+prob_dano_min = 0.02            # daño: sobre esto y 30 % sobre la mediana de los candidatos
+caida_otd_pts = 0.07            # OTD de 3 meses vs. los 9 anteriores
+debilidad_segmento_pts = 0.08   # OTD en el segmento vs. su promedio
+p90_sobre_p50_max = 1.35        # alta variabilidad: P90/P50 sobre esto y 15 % sobre la mediana de los candidatos
+servicios_minimos = 15          # pocos datos: menos servicios que esto en el segmento
+concentracion_max = 0.30        # participación en los últimos 90 días
+servicios_minimos_critico = 10  # en carga crítica no se recomienda a quien tenga menos
+
+[fechas]
+hoy = 2026-10-24                # fecha de corte de los datos simulados

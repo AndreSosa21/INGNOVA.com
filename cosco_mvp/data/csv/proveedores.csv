@@ -1,0 +1,16 @@
+id,nombre,nit,ciudad_base_id,anio_fundacion,fecha_inicio_cosco,tiempo_reaccion_prom_h,puntaje_desempeno_cosco,otd_historico,tiempo_entrega_prom_h,servicios_historicos,contacto,activo
+1,Transportes Andinos del Pacífico,871503137-6,12,1998,2024-03-27,1.8,84.6,0.803,23.9,406,luisortega@example.org,True
+2,LogiCaribe S.A.S.,857233887-5,3,2009,2020-01-16,3.4,77.2,0.775,35.4,785,luisgonzalez@example.com,True
+3,FríoExpress Colombia,823971019-7,5,2005,2020-08-31,1.0,89.9,0.884,37.5,518,slopez@example.com,True
+4,Carga Pesada Nacional,806748831-7,8,1992,2021-09-17,2.7,77.3,0.749,47.0,617,fpardo@example.net,True
+5,Tanqueros Unidos,821950336-4,15,2001,2022-10-14,1.5,84.8,0.822,41.2,977,edgar34@example.com,True
+6,RutaSegura Logística,851775385-7,5,2011,2023-12-27,0.8,92.3,0.91,35.8,442,gmarquez@example.com,True
+7,TransOriente Llanero,900567686-7,17,2012,2022-02-14,2.0,78.6,0.8,22.9,95,edwinarroyo@example.com,True
+8,Sur Cargo Express,809408201-6,20,2008,2020-04-29,1.2,74.7,0.754,25.0,366,karen96@example.com,True
+9,Antioquia Freight,804563439-3,8,2003,2024-01-26,1.8,82.6,0.853,37.2,2387,liliana95@example.com,True
+10,Santander Trucking,857144499-2,15,2014,2020-10-20,2.4,79.1,0.752,38.3,624,vcastillo@example.com,True
+11,Económicos del Valle,885505069-7,12,2016,2021-05-26,4.2,63.9,0.602,27.6,684,jhon22@example.org,True
+12,MultiModal Colombia,825310569-2,5,1995,2019-08-22,2.5,81.5,0.812,39.0,2434,william09@example.org,True
+13,NovaTrans 4.0,892385092-8,5,2024,2026-09-05,1.0,96.8,1.0,34.2,9,luz60@example.org,True
+14,Costa Norte Carga,838813053-8,2,2006,2024-05-26,1.8,82.8,0.81,31.3,416,josebustamante@example.com,True
+15,Express Cafetero,829415207-6,9,2010,2019-10-19,1.4,82.0,0.808,21.1,193,lmontoya@example.com,True
