@@ -86,8 +86,17 @@ El sistema sube el éxito 5,7 puntos frente a la decisión histórica con el mis
 45 % de la mejora posible. *El MCDM estático usa `otd_historico`, que incluye el periodo de prueba: está
 favorecido.
 
+## Calibración de pesos (`python -m cosco.validacion.calibrar`, ~1 min)
+
+Mes de validación aparte (25/06-25/07/2026, 438 solicitudes, no entra en el backtest). Se probaron 48 variantes:
+dar 0-50 % de peso al % de éxito del Monte Carlo (factor `exito`), multiplicar el peso de precio ×0,5-1,25 y el
+de confiabilidad ×1-1,5. Todas quedan entre 73,6 % y 75,5 % de éxito (los pesos actuales: 73,9 %; decisión
+histórica: 66,7 %), y las que suben el éxito suben también el costo y borran la diferencia entre perfiles.
+Conclusión: el resultado es robusto a los pesos y se mantienen los de los perfiles. El factor `exito` queda
+disponible con peso 0.
+
 ## Pendiente
 
 - Simulación de regret del bandido.
-- Sensibilidad de pesos ±20 %.
+- Sensibilidad ±20 % por peso individual (la calibración ya muestra que el resultado es estable).
 - Modo lote con PuLP y curva ε-restricción (plus).

@@ -19,18 +19,18 @@ from cosco.motor import bandido, filtros
 from cosco.motor.datos import Datos, a_fecha, distancia_km, horas_estandar, peso_recencia, politicas, riesgo_corredor
 from cosco.motor.montecarlo import ResultadoMC, Ruta, simular
 
-FACTORES = ["precio", "tiempo", "confiabilidad", "historial", "holgura", "segmento"]
+FACTORES = ["precio", "tiempo", "confiabilidad", "historial", "holgura", "segmento", "exito"]
 NOMBRE_FACTOR = {
     "precio": "precio", "tiempo": "tiempo de tránsito", "confiabilidad": "confiabilidad reciente",
     "historial": "historial de incidentes y calidad", "holgura": "holgura de capacidad",
-    "segmento": "desempeño en este segmento",
+    "segmento": "desempeño en este segmento", "exito": "probabilidad de éxito (Monte Carlo)",
 }
 # qué factor pierde su peso cuando el requisito se vuelve restricción
 FACTOR_DE_RESTRICCION = {"tiempo": "tiempo", "precio": "precio", "confiabilidad": "confiabilidad",
                          "incidentes": "historial"}
 # tolerancia de la normalización: diferencias menores a esto no separan mucho a los candidatos
 TOLERANCIA = {"precio": 0.15, "tiempo": 0.15, "confiabilidad": 0.10, "historial": 0.25, "holgura": 1.0,
-              "segmento": 0.10}
+              "segmento": 0.10, "exito": 0.10}
 MENOR_ES_MEJOR = {"precio", "tiempo"}
 
 
@@ -114,7 +114,7 @@ def armar_requisitos(d: Datos, sol: Solicitud, lista: list[dict] | None) -> Requ
 
 
 def _peso_preferencia(d: Datos, sol: Solicitud, factor: str, valor) -> float:
-    base = politicas()["perfiles"][sol.perfil][factor]
+    base = politicas()["perfiles"][sol.perfil].get(factor, 0.0) or 0.10
     if isinstance(valor, str):
         return base * {"alta": 1.5, "muy alta": 2.0, "baja": 0.5, "ninguna": 0.0}.get(valor.lower(), 1.0)
     return float(valor)
@@ -122,7 +122,7 @@ def _peso_preferencia(d: Datos, sol: Solicitud, factor: str, valor) -> float:
 
 def pesos_finales(sol: Solicitud, req: Requisitos) -> tuple[dict[str, float], list[str]]:
     """Pesos del perfil + preferencias; un factor que pasa a restricción pierde su peso y este se reparte."""
-    w = dict(politicas()["perfiles"][sol.perfil])
+    w = {f: politicas()["perfiles"][sol.perfil].get(f, 0.0) for f in FACTORES}
     w.update(req.pesos)
     sin_peso = []
     for nombre, valor in (("tiempo", req.plazo_h), ("precio", req.precio_max),
@@ -234,7 +234,7 @@ def _evaluar(d: Datos, sol: Solicitud, req: Requisitos, n: int, rng: np.random.G
         crudos = dict(precio=mc.costo_esperado / unidades_mc * sol.unidades, tiempo=mc.tiempo_p90,
                       confiabilidad=beta.media, historial=extra["historial"],
                       holgura=float(np.clip((rev.disponibles - sol.unidades) / max(sol.unidades, 1), 0, 3)),
-                      segmento=extra["otd_segmento"] - extra["otd_propio"])
+                      segmento=extra["otd_segmento"] - extra["otd_propio"], exito=mc.p_exito)
         ev = Evaluado(pid, nombre, rev, beta, mc, crudos, extra)
 
         motivo = None
@@ -376,6 +376,7 @@ def _frase_factor(e: Evaluado, f: str) -> str:
                      f"reacción real {e.extra['reaccion_real_h']:.1f} h)",
         "holgura": f"tiene {e.revision.disponibles} vehículos libres",
         "segmento": f"en este segmento cumple {e.extra['otd_segmento']:.0%} vs. {e.extra['otd_propio']:.0%} en general",
+        "exito": f"{e.mc.p_exito:.0%} de probabilidad de cumplir todo (plazo, presupuesto y sin daño)",
     }[f]
 
 
