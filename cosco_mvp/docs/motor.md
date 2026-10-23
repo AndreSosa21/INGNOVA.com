@@ -95,8 +95,20 @@ histórica: 66,7 %), y las que suben el éxito suben también el costo y borran 
 Conclusión: el resultado es robusto a los pesos y se mantienen los de los perfiles. El factor `exito` queda
 disponible con peso 0.
 
-## Pendiente
+## Simulación del bandido (`python -m cosco.validacion.bandido_sim`, ~25 s)
 
-- Simulación de regret del bandido.
+448 solicitudes de los últimos 3 meses en secuencia; cada política aprende de sus propios resultados
+(simulados con la verdad oculta). `data/bandido_sim.csv` trae el regret acumulado paso a paso para graficarlo.
+
+| Política | Regret acumulado | OTD real promedio | Cuota de Antioquia Freight (empeoró) |
+|---|---|---|---|
+| **Thompson con olvido (motor)** | **25,7** | **83,0 %** | **16,7 %** |
+| Mejor promedio histórico | 37,7 | 80,4 % | 48,2 % |
+| Al azar | 38,1 | 80,3 % | 16,5 % |
+
+El bandido del motor tiene 32 % menos arrepentimiento y deja de cargarle casi la mitad de los envíos a
+Antioquia Freight, que el promedio histórico sigue eligiendo porque su historial viejo era bueno.
+
+## Pendiente
 - Sensibilidad ±20 % por peso individual (la calibración ya muestra que el resultado es estable).
 - Modo lote con PuLP y curva ε-restricción (plus).

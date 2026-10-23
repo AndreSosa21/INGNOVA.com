@@ -5,3 +5,4 @@ __pycache__/
 data/cosco.db
 data/backtest.csv
 data/calibracion.json
+data/bandido_sim.csv

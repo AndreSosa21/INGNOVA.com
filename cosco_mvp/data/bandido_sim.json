@@ -1,0 +1,18 @@
+{
+  "solicitudes": 448,
+  "regret_total": {
+    "azar": 38.1,
+    "mejor_promedio": 37.7,
+    "thompson_olvido": 25.7
+  },
+  "otd_real_promedio": {
+    "azar": 0.803,
+    "mejor_promedio": 0.804,
+    "thompson_olvido": 0.83
+  },
+  "cuota_antioquia_freight": {
+    "azar": 0.165,
+    "mejor_promedio": 0.482,
+    "thompson_olvido": 0.167
+  }
+}
