@@ -37,9 +37,11 @@ def _d(engine: Engine | None) -> Datos:
 
 # ====================================================================== consulta
 def consultar_ranking(solicitud: dict | int, requisitos: list[dict] | None = None, top: int | None = None,
-                      engine: Engine | None = None) -> dict:
-    """Top 3 explicado, ranking completo, descartados con su motivo, carga dividida y alternativas."""
-    return calcular(_d(engine), solicitud, requisitos).a_dict(top)
+                      engine: Engine | None = None, muestra: int = 0) -> dict:
+    """Top 3 explicado, ranking completo, descartados con su motivo, carga dividida y alternativas.
+
+    `muestra` > 0 agrega a cada proveedor esa cantidad de viajes simulados (para el gráfico del dashboard)."""
+    return calcular(_d(engine), solicitud, requisitos).a_dict(top, muestra)
 
 
 def explicar_diferencia(a: str, b: str, solicitud: dict | int, requisitos: list[dict] | None = None,
@@ -243,7 +245,9 @@ def cerrar_servicio(decision_id: int, a_tiempo: bool, tiempo_real_h: float, cost
     guardar_estado_bandit(engine, [dict(proveedor_id=pid, segmento=ruta.segmento, alfa=b.alfa, beta=b.beta)])
     return dict(decision_id=decision_id, proveedor=d.nombre("proveedores", pid), segmento=ruta.segmento,
                 confiabilidad_anterior=round(antes.media, 3), confiabilidad_nueva=round(b.media, 3),
-                servicios_en_segmento=round(b.n_efectivo, 1))
+                servicios_en_segmento=round(b.n_efectivo, 1),
+                bandido_anterior=dict(alfa=round(antes.alfa, 2), beta=round(antes.beta, 2)),
+                bandido_nuevo=dict(alfa=round(b.alfa, 2), beta=round(b.beta, 2)))
 
 
 def guardar_estado_bandit(engine: Engine | None = None, filas: list[dict] | None = None) -> int:

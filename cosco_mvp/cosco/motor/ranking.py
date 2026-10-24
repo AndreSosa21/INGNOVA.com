@@ -420,8 +420,12 @@ def contrafactual(a: Evaluado, b: Evaluado, evs: list[Evaluado], pesos: dict[str
     return f"Ni bajando 60 % su precio o su tiempo, {b.nombre} pasaría a {a.nombre}."
 
 
-def _a_dict(e: Evaluado, evs: list[Evaluado], posicion: int | None) -> dict:
+def _a_dict(e: Evaluado, evs: list[Evaluado], posicion: int | None, muestra: int = 0) -> dict:
     lo, hi = e.beta.intervalo90()
+    extra = {}
+    if muestra:  # viajes simulados para dibujar (los escenarios ya salen en orden aleatorio): [horas, éxito]
+        extra = dict(escenarios=len(e.mc.tiempos), muestra_mc=[[round(float(t), 1), int(x)] for t, x in
+                                                               zip(e.mc.tiempos[:muestra], e.mc.exito[:muestra])])
     return dict(
         posicion=posicion, proveedor_id=e.proveedor_id, proveedor=e.nombre, puntaje=e.puntaje,
         p_exito=round(e.mc.p_exito, 3), p_a_tiempo=round(e.mc.p_a_tiempo, 3), p_dano=round(e.mc.p_dano, 4),
@@ -433,7 +437,7 @@ def _a_dict(e: Evaluado, evs: list[Evaluado], posicion: int | None) -> dict:
         semaforo=e.semaforo, senales=e.senales, razones=razones(e, evs) if evs else [],
         dominado_por=None if e.dominado_por is None else _por_id(evs, e.dominado_por).nombre,
         explorado=e.explorado, servicios_en_segmento=e.extra["servicios_segmento"],
-        datos_propios=round(e.mc.peso_propio, 2),
+        datos_propios=round(e.mc.peso_propio, 2), **extra,
     )
 
 
@@ -582,9 +586,9 @@ class Ranking:
     hhi: float
     nombres: dict = field(default_factory=dict)
 
-    def a_dict(self, top: int | None = None) -> dict:
+    def a_dict(self, top: int | None = None, muestra: int = 0) -> dict:
         d_sol = self.solicitud
-        lista = [_a_dict(e, self.ordenados, i + 1) for i, e in enumerate(self.ordenados)]
+        lista = [_a_dict(e, self.ordenados, i + 1, muestra) for i, e in enumerate(self.ordenados)]
         top3 = lista[:3]
         explicacion = None
         if len(self.ordenados) >= 2:

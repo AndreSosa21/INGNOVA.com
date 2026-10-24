@@ -87,7 +87,7 @@ def test_las_30_solicitudes_de_prueba_responden(d):
 
 def test_las_etiquetas_de_las_tarjetas_son_ciertas(d, monkeypatch):
     from cosco import server
-    monkeypatch.setattr(server.api, "consultar_ranking", lambda s, r: calcular(d, s, r, n=1000).a_dict())
+    monkeypatch.setattr(server.api, "consultar_ranking", lambda s, r, muestra=0: calcular(d, s, r, n=1000).a_dict(muestra=muestra))
     for sid in d.solicitudes[d.solicitudes.fase == "prueba"].index:
         e = server._estrategias(int(sid), [])["estrategias"]
         if not e:

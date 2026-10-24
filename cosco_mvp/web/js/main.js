@@ -7,6 +7,7 @@ import {
   DiferenciaPorFactor, Esqueleto, Estado, GraficoCostoP90, Pasos, SemaforoRiesgo,
 } from "./componentes.js";
 import { crearCopiloto } from "./copiloto.js";
+import { GraficoMC, dibujarMC, CambioConfiabilidad, animarConfiabilidad } from "./simulacion.js";
 import { crearGerencia } from "./gerencia.js";
 
 const PRIORIDAD_TXT = { Tiempo: "Lo más rápido", Costo: "Lo más barato", "Carga crítica": "Carga delicada", Equilibrado: "Equilibrado" };
@@ -250,7 +251,7 @@ function seccionServicio() {
   if (estado === "atendida") {
     const r = c?.resultado;
     cuerpo = `<div class="serv-res"><p><strong>${b.resultado_a_tiempo ? "Llegó dentro del plazo" : "Llegó tarde"}</strong>${b.resultado_costo_cop != null ? ` · costo final ${cop(b.resultado_costo_cop)}` : ""}.</p>
-      ${r ? `<p>La confiabilidad de ${esc(r.proveedor)} en este segmento pasó de <b class="num">${pct(r.confiabilidad_anterior)}</b> a <b class="num">${pct(r.confiabilidad_nueva)}</b>. El próximo ranking ya usa este resultado.</p>` : `<p class="muted">El resultado ya entró a la confiabilidad del proveedor en este segmento.</p>`}</div>`;
+      ${r ? CambioConfiabilidad(r) : `<p class="muted">El resultado ya entró a la confiabilidad del proveedor en este segmento.</p>`}</div>`;
   } else if (!c) {
     // Línea de seguimiento: lo hecho, y el siguiente paso con su botón a la vista.
     const salio = estado === "en_transito";
@@ -319,7 +320,7 @@ function pintarDetalle() {
     const d = S.data, ops = opciones();
     const debil = !d.respuesta.sin_opcion && d.respuesta.alternativas.length && !enCursoDe(S.base)
       ? `<div style="margin-top:16px">${bloqueAlternativas(d.respuesta, `La mejor opción tiene ${pct0(ops[0].p_exito)} de éxito. Qué la puede mejorar`)}</div>` : "";
-    const cuerpoOpc = d.respuesta.sin_opcion ? vistaSinOpcion() : `<div class="cards">${ops.map((o) => TarjetaOpcion(o, { solicitud: d.respuesta.solicitud, opciones: ops, asignado: S.asignado })).join("")}</div>${debil}`;
+    const cuerpoOpc = d.respuesta.sin_opcion ? vistaSinOpcion() : `${GraficoMC(ops, d.respuesta.solicitud.plazo_horas)}<div class="cards">${ops.map((o) => TarjetaOpcion(o, { solicitud: d.respuesta.solicitud, opciones: ops, asignado: S.asignado })).join("")}</div>${debil}`;
     const enCurso = enCursoDe(S.base);
     cuerpo = `${seccionServicio()}${enCurso ? `<p class="sub-h" style="margin:8px 0 -8px">Las opciones que se compararon</p>` : `<p class="hallazgo">${hallazgo()}</p>`}${avisos()}${cuerpoOpc}
       <div class="mas">${seccionAjustar()}${d.respuesta.sin_opcion ? "" : seccionPorque(ops)}<details class="d" data-d="descartados" ${S.abiertos.has("descartados") ? "open" : ""}><summary><span>Descartados<span class="sub">${d.respuesta.descartados.length} proveedores, cada uno con su razón</span></span></summary><div class="d-body">${ListaDescartados(d.respuesta.descartados)}</div></details>${d.respuesta.sin_opcion ? "" : seccionExperta(ops)}</div>`;
@@ -327,6 +328,8 @@ function pintarDetalle() {
   const foco = document.activeElement?.id;
   elDetalle.innerHTML = `<div class="detalle-in">${encabezado()}${S.status === "cargando" ? "" : ""}${cuerpo}</div>`;
   elDetalle.scrollTop = y;
+  if (S.status === "normal" && S.data && !S.data.respuesta.sin_opcion) dibujarMC(elDetalle, opciones(), S.data.respuesta.solicitud.plazo_horas, S.data);
+  if (S.cierre?.resultado) animarConfiabilidad(elDetalle, S.cierre.resultado);
   if (foco) document.getElementById(foco)?.focus();
 }
 
