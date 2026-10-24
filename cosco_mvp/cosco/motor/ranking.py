@@ -286,11 +286,11 @@ def puntuar(evs: list[Evaluado], pesos: dict[str, float]) -> None:
 def pareto(evs: list[Evaluado]) -> None:
     """Marca a quien otro supera o iguala en costo esperado, tiempo P90 y % de éxito (y supera en al menos uno).
 
-    Un proveedor con alerta crítica (p. ej. pocos datos en carga crítica) no deja por fuera a nadie.
+    Un proveedor con alerta crítica o semáforo rojo no deja por fuera a nadie.
     """
     for a in evs:
         for b in evs:
-            if a is b or b.alerta_critica:
+            if a is b or b.alerta_critica or b.semaforo == "rojo":
                 continue
             ca, cb = (a.crudos["precio"], a.crudos["tiempo"], -a.mc.p_exito), (b.crudos["precio"], b.crudos["tiempo"], -b.mc.p_exito)
             if all(y <= x for x, y in zip(ca, cb)) and any(y < x for x, y in zip(ca, cb)):
@@ -302,11 +302,16 @@ def _por_id(evs: list[Evaluado], pid: int) -> Evaluado:
     return next(e for e in evs if e.proveedor_id == pid)
 
 
+def puntaje_ajustado(e: Evaluado) -> float:
+    """Puntaje menos 4 pts por cada señal de riesgo (máx. 12): a igual mérito, queda arriba quien tiene menos alertas."""
+    return e.puntaje - min(12.0, 4.0 * len(e.senales))
+
+
 def ordenar(evs: list[Evaluado], sol: Solicitud, rng: np.random.Generator) -> list[Evaluado]:
     """No dominados primero, por puntaje. Thompson desempata a los que están a menos del 5 % del primero."""
     pb = politicas()["bandido"]
     # quien tiene una alerta crítica (p. ej. casi seguro se pasa del presupuesto) va después de los demás
-    clave = lambda e: (e.alerta_critica, -e.puntaje)  # noqa: E731
+    clave = lambda e: (e.alerta_critica, -puntaje_ajustado(e))  # noqa: E731
     libres = sorted([e for e in evs if e.dominado_por is None], key=clave)
     dominados = sorted([e for e in evs if e.dominado_por is not None], key=clave)
     explorar = sol.perfil != "Critico" or pb["explorar_en_critico"]
@@ -424,6 +429,7 @@ def _a_dict(e: Evaluado, evs: list[Evaluado], posicion: int | None) -> dict:
     lo, hi = e.beta.intervalo90()
     return dict(
         posicion=posicion, proveedor_id=e.proveedor_id, proveedor=e.nombre, puntaje=e.puntaje,
+        puntaje_ajustado=round(puntaje_ajustado(e), 1),
         p_exito=round(e.mc.p_exito, 3), p_a_tiempo=round(e.mc.p_a_tiempo, 3), p_dano=round(e.mc.p_dano, 4),
         p_sobre_presupuesto=round(e.mc.p_sobre_presupuesto, 3), confianza=e.beta.confianza(),
         confiabilidad=round(e.beta.media, 3), intervalo_confiabilidad=[round(lo, 3), round(hi, 3)],
