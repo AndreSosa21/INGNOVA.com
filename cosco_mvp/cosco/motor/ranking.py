@@ -509,7 +509,9 @@ def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado]
                             & (d.compatibilidad.tipo_vehiculo_id != sol.tipo_vehiculo_id)].sort_values("preferencia")
     for tv in comp.tipo_vehiculo_id:
         nombre = d.nombre("tipos_vehiculo", tv)
-        if probar(f"Si se usa {nombre} en vez de {d.nombre('tipos_vehiculo', sol.tipo_vehiculo_id)}",
+        menor = d.tipos_vehiculo.teu.get(int(tv), 0) < d.tipos_vehiculo.teu.get(sol.tipo_vehiculo_id, 0)
+        if probar(f"Si se usa {nombre} en vez de {d.nombre('tipos_vehiculo', sol.tipo_vehiculo_id)}"
+                  + (" (solo si los contenedores son de 20': confírmalo con el cliente)" if menor else ""),
                   replace(sol, tipo_vehiculo_id=int(tv)), req, dict(tipo_vehiculo=nombre)):
             break
     for dias in range(1, 8):
