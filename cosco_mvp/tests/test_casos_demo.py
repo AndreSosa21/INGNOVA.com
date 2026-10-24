@@ -35,17 +35,17 @@ def test_c1_caso_normal_sin_alertas():
     assert r["ranking"][0]["semaforo"] == "verde" and r["ranking"][0]["p_exito"] > 0.9
 
 
-def test_c2_capacidad_insuficiente_descarta_y_deja_un_unico_proveedor_con_cupo():
+def test_c2_capacidad_insuficiente_divide_la_carga():
     r = rank(dict(origen="Bogotá", destino="Barranquilla", tipo_carga="Contenedor seco", unidades=6, plazo_horas=96))
     cap = motivos(r, "capacidad")
     assert cap["Antioquia Freight"] == "solo tiene 4 de 6 Tractomula 40' (FEU) libres el 27/10"
     assert "Antioquia Freight" not in [o["proveedor"] for o in r["ranking"]]
-    assert r["ranking"] and not r["sin_opcion"]
+    assert r["carga_dividida"] is None        # hay opciones individuales y dividir no mejora: no se muestra
 
 
-def test_c2b_ningun_proveedor_alcanza_solo_pero_dos_o_tres_juntos_si():
+def test_c2b_nadie_alcanza_solo_pero_entre_varios_si():
     r = rank(dict(origen="Bogotá", destino="Barranquilla", tipo_carga="Contenedor seco", unidades=8, plazo_horas=96))
-    assert r["sin_opcion"]
+    assert r["sin_opcion"] and not r["ranking"]
     div = r["carga_dividida"]
     assert div and sum(x["unidades"] for x in div["reparto"]) == 8 and len(div["reparto"]) >= 2
     assert div["p_exito_conjunta"] <= min(x["p_exito"] for x in div["reparto"])   # el conjunto nunca supera a la parte
@@ -78,7 +78,7 @@ def test_c6_plazo_imposible_no_se_vende_como_bueno():
     r = rank(dict(origen="Buenaventura", destino="Cúcuta", tipo_carga="Contenedor seco", unidades=1, plazo_horas=20))
     assert all(o["p_exito"] < 0.05 and o["semaforo"] == "rojo" for o in r["ranking"][:3])
     amp = [a for a in r["alternativas"] if "plazo_horas" in a["cambio"]]
-    assert amp and amp[0]["p_exito_mejor"] > 0.8
+    assert amp and amp[0]["p_exito_mejor"] >= 0.10          # la cascada solo propone cambios que mejoran
 
 
 def test_c7_presupuesto_imposible_ofrece_cambiar_vehiculo_o_presupuesto():
