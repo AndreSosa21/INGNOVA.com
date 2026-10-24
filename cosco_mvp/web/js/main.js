@@ -73,13 +73,14 @@ const porAsignar = () => S.bandeja.filter((s) => s.estado_clave === "pendiente" 
 const asignadas = () => S.bandeja.filter((s) => s.estado_clave === "asignada" || s.estado_clave === "en_transito");
 const cerradas = () => S.bandeja.filter((s) => s.estado_clave === "atendida");
 const PASO = { pendiente: 0, en_analisis: 1, asignada: 2, en_transito: 3, atendida: 4 };
+const SIGUIENTE = { asignada: "marcar la salida del vehículo", en_transito: "registrar cómo llegó" };
 
 function pintarLista() {
   const items = { por_asignar: porAsignar, asignadas, cerradas }[S.lista]();
   const filas = items.map((s) => `<button class="fila-sol" type="button" data-act="abrir" data-id="${s.id}" aria-current="${s.id === S.selId}">
       <span class="l1"><span>${esc(s.origen)} a ${esc(s.destino)}</span><time>${hace(s.creada)}</time></span>
       <span class="l2">${num(s.unidades)} × ${esc(s.tipo_carga)} · plazo ${plazo(s.plazo_horas)}</span>
-      <span class="l3"><span class="marca" data-e="${esc(s.estado)}"><i></i>${esc(s.estado)}</span><span>${esc(s.codigo)}</span>${S.nuevos.has(s.id) ? '<span class="nueva">Nueva</span>' : ""}${s.proveedor_elegido ? `<span>· ${esc(corto(s.proveedor_elegido))}</span>` : ""}</span></button>`).join("");
+      <span class="l3"><span class="marca" data-e="${esc(s.estado)}"><i></i>${esc(s.estado)}</span><span>${esc(s.codigo)}</span>${S.nuevos.has(s.id) ? '<span class="nueva">Nueva</span>' : ""}${s.proveedor_elegido ? `<span>· ${esc(corto(s.proveedor_elegido))}</span>` : ""}</span>${SIGUIENTE[s.estado_clave] ? `<span class="l4">Siguiente: ${SIGUIENTE[s.estado_clave]}</span>` : ""}</button>`).join("");
   const vacia = S.lista === "por_asignar"
     ? `<div class="lista-vacia"><h2>No hay solicitudes por asignar</h2><p>Cuando un cliente envíe una desde el portal, aparece aquí sola.</p><button class="btn" type="button" data-act="ejemplos">Crear dos de ejemplo</button></div>`
     : S.lista === "asignadas" ? `<div class="lista-vacia"><h2>Nada asignado en curso</h2><p>Las que elijas aparecen aquí hasta que registres cómo llegaron.</p></div>`
@@ -161,7 +162,7 @@ function encabezado() {
 function avisos() {
   let h = "";
   if (S.aviso) h += `<div class="aviso" role="status"><span>${esc(S.aviso.texto)}</span><span style="display:flex;gap:8px"><button class="btn small" type="button" data-act="deshacer">Deshacer</button><button class="btn small ghost" type="button" data-act="cerrar-aviso">Cerrar</button></span></div>`;
-  if (S.asignado && S.decision && S.base.estado_clave === "asignada") h += `<div class="aviso ok" role="status"><span><strong>Asignada a ${esc(S.asignado)}.</strong> Decisión #${S.decision.decision_id} registrada${S.decision.cambio_manual ? " con motivo" : ""}. El cliente ya ve su solicitud como asignada.</span></div>`;
+  if (S.asignado && S.decision && S.base.estado_clave === "asignada") h += `<div class="aviso ok" role="status"><span><strong>Asignada a ${esc(S.asignado)}.</strong> Decisión #${S.decision.decision_id} registrada${S.decision.cambio_manual ? " con motivo" : ""}. El seguimiento quedó arriba y en la pestaña En curso.</span></div>`;
   if (simulando()) h += `<div class="aviso" role="status"><span>Estás simulando otras condiciones. El pedido del cliente no cambia.</span><button class="btn small" type="button" data-act="restablecer">Volver a lo que pidió el cliente</button></div>`;
   return h;
 }
@@ -244,7 +245,14 @@ function seccionServicio() {
     cuerpo = `<div class="serv-res"><p><strong>${b.resultado_a_tiempo ? "Llegó dentro del plazo" : "Llegó tarde"}</strong>${b.resultado_costo_cop != null ? ` · costo final ${cop(b.resultado_costo_cop)}` : ""}.</p>
       ${r ? `<p>La confiabilidad de ${esc(r.proveedor)} en este segmento pasó de <b class="num">${pct(r.confiabilidad_anterior)}</b> a <b class="num">${pct(r.confiabilidad_nueva)}</b>. El próximo ranking ya usa este resultado.</p>` : `<p class="muted">El resultado ya entró a la confiabilidad del proveedor en este segmento.</p>`}</div>`;
   } else if (!c) {
-    cuerpo = `<div class="serv-acc">${estado === "asignada" ? `<button class="btn" type="button" data-act="transito">El vehículo salió: marcar en tránsito</button>` : ""}<button class="btn primary" type="button" data-act="abrir-cierre">Registrar cómo llegó</button></div>`;
+    // Línea de seguimiento: lo hecho, y el siguiente paso con su botón a la vista.
+    const salio = estado === "en_transito";
+    cuerpo = `<ol class="seguir">
+      <li data-estado="hecho"><i></i><div><b>Asignada</b><span class="muted">El cliente ya la ve asignada.</span></div></li>
+      <li data-estado="${salio ? "hecho" : "actual"}"><i></i><div><b>En tránsito</b>${salio ? `<span class="muted">El vehículo ya salió de ${esc(b.origen)}.</span>`
+        : `<span>¿Ya salió el vehículo de ${esc(b.origen)}? Márcalo para que el cliente vea que su carga va en camino.</span><button class="btn primary" type="button" data-act="transito">Sí, salió: marcar en tránsito</button>`}</div></li>
+      <li data-estado="${salio ? "actual" : "futuro"}"><i></i><div><b>Cerrada</b><span${salio ? "" : ' class="muted"'}>${salio ? `Cuando llegue a ${esc(b.destino)}, registra el tiempo real y el costo final. El sistema aprende de eso.` : `Cuando llegue a ${esc(b.destino)}, registras cómo le fue.`}</span>
+        <button class="btn ${salio ? "primary" : "small ghost"}" type="button" data-act="abrir-cierre">${salio ? "Registrar cómo llegó" : "Ya llegó: registrar cómo llegó"}</button></div></li></ol>`;
   } else {
     const fueraPlazo = Number(c.tiempo) > b.plazo_horas;
     cuerpo = `<form class="cierre" id="form-cierre" novalidate>
@@ -281,6 +289,7 @@ async function enviarCierre() {
   try {
     c.resultado = await Api.cerrar({ decision_id: S.base.decision_id, a_tiempo: c.a_tiempo, tiempo_real_h: t, costo_final_cop: k, dano_carga: c.dano, calificacion_cliente: Number(c.calif) });
     Object.assign(S.base, { estado_clave: "atendida", estado: "Cerrada", resultado_a_tiempo: c.a_tiempo, resultado_costo_cop: k });
+    S.lista = "cerradas";
     S.perfiles.delete(S.asignado);
     pintarLista(); cargarBandeja();
   } catch (e) { c.err = e.message; }
@@ -361,6 +370,7 @@ $("#form-elegir").onsubmit = async (ev) => {
     const r = await Api.decision({ solicitud_id: S.selId, requisitos: requisitos(), proveedor_elegido: eleccion.o.proveedor, proveedor_recomendado: eleccion.rec.proveedor, exito_predicho: eleccion.o.p_exito, motivo: motivo || null });
     S.asignado = eleccion.o.proveedor; S.decision = r;
     Object.assign(S.base, { estado_clave: "asignada", estado: "Asignada", proveedor_elegido: S.asignado, decision_id: r.decision_id, exito_predicho: eleccion.o.p_exito });
+    S.lista = "asignadas"; // la solicitud se mueve de pestaña: la lista la sigue
     dlg.close(); cerrarCajon(); pintarLista(); pintarDetalle(); copiloto.actualizar();
     cargarBandeja();
   } catch (e) { $("#elegir-err").textContent = e.message; }
@@ -406,7 +416,7 @@ function clic(ev) {
   else if (a === "reintentar") refrescar();
   else if (a === "aplicar-alt") { const alt = S.data.respuesta.alternativas[Number(b.dataset.i)]; acciones.solicitud({ ...(alt.cambio.fecha ? { fecha: alt.cambio.fecha } : {}), ...(alt.cambio.plazo_horas ? { plazo_horas: alt.cambio.plazo_horas } : {}) }); }
   else if (a === "preguntar") copiloto.preguntar(b.dataset.q);
-  else if (a === "transito") Api.transito(S.selId).then((e) => { Object.assign(S.base, { estado_clave: "en_transito", estado: e.estado }); pintarLista(); pintarDetalle(); }).catch((e) => { S.aviso = { texto: e.message }; pintarDetalle(); });
+  else if (a === "transito") Api.transito(S.selId).then((e) => { Object.assign(S.base, { estado_clave: "en_transito", estado: e.estado }); pintarLista(); pintarDetalle(); cargarBandeja(); }).catch((e) => { S.aviso = { texto: e.message }; pintarDetalle(); });
   else if (a === "abrir-cierre") { abrirCierre(); pintarDetalle(); document.getElementById("c-tiempo")?.focus(); }
   else if (a === "cancelar-cierre") { S.cierre = null; pintarDetalle(); }
   else if (a === "sn") { S.cierre[b.dataset.campo] = b.dataset.v === "true"; pintarDetalle(); }
