@@ -35,9 +35,11 @@ def get_engine(url: str | None = None) -> Engine:
     """Un engine (y su pool de conexiones) por URL y por proceso.
 
     Crear uno nuevo en cada llamada abría conexiones nuevas al pooler de Supabase cada vez que el dashboard
-    sondeaba la bandeja, hasta llenar su límite de clientes.
+    sondeaba la bandeja, hasta llenar su límite de clientes (15 en modo sesión). Con dos servidores se usan como
+    máximo 6 conexiones. Sin sentencias preparadas, para que funcione también con el pooler de transacciones (6543).
     """
     url = url or database_url()
     if url not in _ENGINES:
-        _ENGINES[url] = create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
+        args = {"prepare_threshold": None} if url.startswith("postgresql+psycopg") else {}
+        _ENGINES[url] = create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=1, connect_args=args)
     return _ENGINES[url]
