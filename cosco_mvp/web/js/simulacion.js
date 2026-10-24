@@ -170,3 +170,25 @@ export function animarConfiabilidad(raiz, resultado) {
   };
   requestAnimationFrame(paso);
 }
+
+// El resultado del cierre solo llega en la respuesta de /api/cerrar; se guarda en este navegador para poder
+// volver a ver el cambio al reabrir la solicitud cerrada.
+const CLAVE = "cosco.cierres";
+const guardados = new Map();
+export function guardarCierre(decisionId, r) {
+  guardados.set(decisionId, r);
+  try {
+    const todo = JSON.parse(localStorage.getItem(CLAVE) || "{}");
+    todo[decisionId] = r;
+    localStorage.setItem(CLAVE, JSON.stringify(todo));
+  } catch { /* sin almacenamiento: solo se ve en esta sesión */ }
+}
+export function cierreGuardado(decisionId) {
+  if (decisionId == null) return null;
+  if (!guardados.has(decisionId)) {
+    let r = null;
+    try { r = JSON.parse(localStorage.getItem(CLAVE) || "{}")[decisionId] ?? null; } catch { r = null; }
+    guardados.set(decisionId, r);
+  }
+  return guardados.get(decisionId);
+}
