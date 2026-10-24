@@ -7,7 +7,7 @@ import {
   DiferenciaPorFactor, Esqueleto, Estado, GraficoCostoP90, Pasos, SemaforoRiesgo,
 } from "./componentes.js";
 import { crearCopiloto } from "./copiloto.js";
-import { GraficoMC, dibujarMC, CambioConfiabilidad, animarConfiabilidad } from "./simulacion.js";
+import { GraficoMC, dibujarMC, CambioConfiabilidad, animarConfiabilidad, guardarCierre, cierreGuardado } from "./simulacion.js";
 import { crearGerencia } from "./gerencia.js";
 
 const PRIORIDAD_TXT = { Tiempo: "Lo más rápido", Costo: "Lo más barato", "Carga crítica": "Carga delicada", Equilibrado: "Equilibrado" };
@@ -249,7 +249,7 @@ function seccionServicio() {
   const exito = b.exito_predicho != null ? ` · éxito previsto ${pct0(b.exito_predicho)}` : "";
   let cuerpo;
   if (estado === "atendida") {
-    const r = c?.resultado;
+    const r = c?.resultado ?? cierreGuardado(b.decision_id);
     cuerpo = `<div class="serv-res"><p><strong>${b.resultado_a_tiempo ? "Llegó dentro del plazo" : "Llegó tarde"}</strong>${b.resultado_costo_cop != null ? ` · costo final ${cop(b.resultado_costo_cop)}` : ""}.</p>
       ${r ? CambioConfiabilidad(r) : `<p class="muted">El resultado ya entró a la confiabilidad del proveedor en este segmento.</p>`}</div>`;
   } else if (!c) {
@@ -296,6 +296,7 @@ async function enviarCierre() {
   c.enviando = true; pintarDetalle();
   try {
     c.resultado = await Api.cerrar({ decision_id: S.base.decision_id, a_tiempo: c.a_tiempo, tiempo_real_h: t, costo_final_cop: k, dano_carga: c.dano, calificacion_cliente: Number(c.calif) });
+    guardarCierre(S.base.decision_id, c.resultado);
     Object.assign(S.base, { estado_clave: "atendida", estado: "Cerrada", resultado_a_tiempo: c.a_tiempo, resultado_costo_cop: k });
     S.lista = "cerradas";
     S.perfiles.delete(S.asignado);
@@ -329,7 +330,8 @@ function pintarDetalle() {
   elDetalle.innerHTML = `<div class="detalle-in">${encabezado()}${S.status === "cargando" ? "" : ""}${cuerpo}</div>`;
   elDetalle.scrollTop = y;
   if (S.status === "normal" && S.data && !S.data.respuesta.sin_opcion) dibujarMC(elDetalle, opciones(), S.data.respuesta.solicitud.plazo_horas, S.data);
-  if (S.cierre?.resultado) animarConfiabilidad(elDetalle, S.cierre.resultado);
+  const cierre = S.cierre?.resultado ?? (S.base?.estado_clave === "atendida" ? cierreGuardado(S.base.decision_id) : null);
+  if (cierre) animarConfiabilidad(elDetalle, cierre);
   if (foco) document.getElementById(foco)?.focus();
 }
 
