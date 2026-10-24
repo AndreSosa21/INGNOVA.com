@@ -638,7 +638,7 @@ def calcular(d: Datos, solicitud: dict | int | Solicitud, requisitos: list[dict]
         alternativas = cascada(d, sol, req, parciales, rng)
     elif ordenados[0].mc.p_exito < pol_c["exito_debil"]:  # hay opción, pero débil: qué cambio la mejora
         alternativas = cascada(d, sol, req, parciales, rng,
-                               minimo=min(ordenados[0].mc.p_exito + pol_c["mejora_minima"], 0.99))
+                               minimo=min(max(ordenados[0].mc.p_exito + pol_c["mejora_minima"], pol_c["exito_debil"]), 0.99))
     else:
         alternativas = []
     nombres = dict(origen=d.nombre("ciudades", sol.origen_id), destino=d.nombre("ciudades", sol.destino_id),
