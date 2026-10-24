@@ -474,22 +474,22 @@ def dividir(d: Datos, sol: Solicitud, candidatos: list[Evaluado], parciales: lis
     )
 
 
-def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado], rng) -> list[dict]:
-    """Nadie cumple: probar una relajación a la vez y decir cuántos proveedores aparecen con cada una."""
+def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado], rng, piso: float = 0.0) -> list[dict]:
+    """Nadie cumple (o el mejor cumple mal, `piso` > 0): probar una relajación a la vez y decir qué mejora."""
     alternativas = []
 
     pesos, _ = pesos_finales(sol, req)
 
     def probar(descripcion: str, s2: Solicitud, r2: Requisitos, cambio: dict):
         c, p, _, _ = _evaluar(d, s2, r2, 1000, rng)
-        if c:
+        if c and max(e.mc.p_exito for e in c) >= piso:
             mejor = max(c, key=lambda e: e.mc.p_exito)
             alternativas.append(dict(cambio=cambio, descripcion=f"{descripcion}, aparecen {len(c)} proveedor(es)",
                                      proveedores=[e.nombre for e in c], mejor=mejor.nombre,
                                      p_exito_mejor=round(mejor.mc.p_exito, 3)))
             return True
         div = dividir(d, s2, c, p, pesos)
-        if div:
+        if div and div["p_exito_conjunta"] >= max(piso, 0.01):
             quienes = " y ".join(f"{x['proveedor']} ({x['unidades']})" for x in div["reparto"])
             alternativas.append(dict(cambio=dict(cambio, dividir=True),
                                      descripcion=f"{descripcion} y se divide la carga entre {quienes}",
@@ -515,10 +515,21 @@ def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado]
             if probar(f"Si el plazo se amplía {extra} h", sol, replace(req, plazo_h=req.plazo_h + extra),
                       dict(plazo_horas=req.plazo_h + extra)):
                 break
+    elif piso:  # el plazo del cliente no era restricción, pero con él el mejor cumple mal: probar ampliarlo
+        for extra in (12, 24, 48):
+            if probar(f"Si el plazo se amplía {extra} h", replace(sol, plazo_h=sol.plazo_h + extra), req,
+                      dict(plazo_horas=sol.plazo_h + extra)):
+                break
     if req.precio_max is not None:
         for pct in (10, 20, 30):
             if probar(f"Si el precio máximo sube {pct} %", sol, replace(req, precio_max=req.precio_max * (1 + pct / 100)),
                       dict(precio_max_cop=round(req.precio_max * (1 + pct / 100), -3))):
+                break
+    elif piso and sol.presupuesto_cop is not None:
+        for pct in (10, 20, 30, 40):
+            nuevo = round(sol.presupuesto_cop * (1 + pct / 100), -3)
+            if probar(f"Si el presupuesto sube {pct} %", replace(sol, presupuesto_cop=nuevo), req,
+                      dict(presupuesto_cop=nuevo)):
                 break
     if req.confiabilidad_min is not None:
         for menos in (0.05, 0.10):
@@ -530,6 +541,7 @@ def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado]
     if req.sin_incidentes_dias is not None:
         probar("Si se acepta a proveedores con imprevistos recientes", sol, replace(req, sin_incidentes_dias=None),
                dict(sin_incidentes=False))
+    alternativas.sort(key=lambda a: -(a["p_exito_mejor"] or 0))
     if not alternativas:
         alternativas.append(dict(cambio={}, proveedores=[], mejor=None, p_exito_mejor=None, descripcion=(
             "Ningún proveedor de la red puede atenderla ni relajando una condición a la vez. Opciones: partir el envío "
@@ -606,7 +618,10 @@ def calcular(d: Datos, solicitud: dict | int | Solicitud, requisitos: list[dict]
                                     motivo=f"{b.nombre} es igual o mejor en costo, tiempo P90 y % de éxito"))
     ordenados = ordenar(candidatos, sol, rng)
     division = dividir(d, sol, candidatos, parciales, pesos)
-    alternativas = cascada(d, sol, req, parciales, rng) if not ordenados else []
+    mejor_exito = max((e.mc.p_exito for e in ordenados), default=0.0)
+    # sin opción, o la mejor cumple mal (< 60 %): proponer qué cambiar, exigiendo que la alternativa mejore de verdad
+    alternativas = (cascada(d, sol, req, parciales, rng, piso=0.0 if not ordenados else max(0.6, mejor_exito + 0.15))
+                    if not ordenados or mejor_exito < 0.6 else [])
     nombres = dict(origen=d.nombre("ciudades", sol.origen_id), destino=d.nombre("ciudades", sol.destino_id),
                    tipo_carga=d.nombre("tipos_carga", sol.tipo_carga_id),
                    tipo_vehiculo=d.nombre("tipos_vehiculo", sol.tipo_vehiculo_id))

@@ -66,20 +66,34 @@ class Cierre(BaseModel):
 
 
 def _estrategias(solicitud: dict, requisitos: list[dict]) -> dict:
-    """Corre el embudo con los tres perfiles y elige una opción distinta por estrategia."""
+    """Una sola corrida del embudo; las tres tarjetas se eligen por lo que prometen, no por el perfil con que se corrieron.
+
+    Equilibrada = el #1 del perfil de la solicitud. Las otras dos son los mejores *distintos* a ella:
+    la de menor costo esperado (sin perder más de 10 pts de éxito) y la de mayor % de éxito. La etiqueta
+    "Más económica" / "Más confiable" solo se pone si de verdad lo es frente a la equilibrada; si no, queda
+    "Alternativa" y la tarjeta muestra la diferencia real.
+    """
     base = api.consultar_ranking(solicitud, requisitos)
-    resultado = {"respuesta": base, "estrategias": {}, "perfiles": {}}
+    resultado = {"respuesta": base, "estrategias": {}, "perfiles": {"equilibrada": base["pesos"]}}
     if base["sin_opcion"]:
         return resultado
-    usados: set[str] = set()
-    for clave, perfil in ESTRATEGIAS:
-        r = base if perfil is None else api.consultar_ranking(dict(solicitud, perfil=perfil), requisitos)
-        elegido = next((o for o in r["ranking"] if o["proveedor"] not in usados and not o.get("dominado_por")), None)
-        if elegido is None:
-            continue
-        usados.add(elegido["proveedor"])
-        resultado["estrategias"][clave] = dict(elegido, estrategia=clave, coincide_con_primera=elegido["posicion"] != 1)
-        resultado["perfiles"][clave] = r["pesos"]
+    libres = [o for o in base["ranking"] if not o.get("dominado_por")]
+    eq = libres[0]
+    resultado["estrategias"]["equilibrada"] = dict(eq, estrategia="equilibrada", etiqueta="Equilibrada",
+                                                  coincide_con_primera=False)
+    otros = [o for o in libres[1:] if o["semaforo"] != "rojo"] or libres[1:]      # no ofrecer a uno en rojo como "ahorro"
+    if otros:
+        baratos = [o for o in otros if o["p_exito"] >= eq["p_exito"] - 0.10] or otros
+        eco = min(baratos, key=lambda o: o["costo_esperado_cop"])
+        resultado["estrategias"]["economica"] = dict(
+            eco, estrategia="economica", coincide_con_primera=True,
+            etiqueta="Más económica" if eco["costo_esperado_cop"] < eq["costo_esperado_cop"] else "Alternativa")
+        resto = [o for o in otros if o["proveedor"] != eco["proveedor"]]
+        if resto:
+            conf = max(resto, key=lambda o: (o["p_exito"], -o["p_dano"]))
+            resultado["estrategias"]["confiable"] = dict(
+                conf, estrategia="confiable", coincide_con_primera=True,
+                etiqueta="Más confiable" if conf["p_exito"] > eq["p_exito"] else "Alternativa")
     return resultado
 
 
