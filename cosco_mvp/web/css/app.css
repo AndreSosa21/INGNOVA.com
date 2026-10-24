@@ -2,6 +2,7 @@
    Rejilla: riel 56 | hoja inset 8 a derecha y abajo. Dentro de la hoja: lista 340 | detalle fluido.
    Detalle: un solo gutter de 24; las 3 opciones son repeat(3, 1fr), así 3 x w + 2 x 24 = ancho del detalle. */
 @import url("tokens.css");
+@import url("simulacion.css");
 .pasos li[data-estado="actual"] i { box-shadow: none; width: 12px; height: 12px; }
 
 .app { display: grid; grid-template-columns: 56px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100vh; height: 100dvh; overflow: hidden; }

@@ -31,6 +31,7 @@ def _precargar():
 ETIQUETAS = {"equilibrada": "Equilibrada", "economica": "Más económica", "confiable": "Más confiable"}
 MIN_AHORRO = 0.02              # "Más económica" ahorra al menos 2 % frente a la recomendada
 MAX_PERDIDA_ECONOMICA = 0.20   # ... y no pierde más de 20 puntos de éxito
+MUESTRA_MC = 160               # viajes simulados por proveedor que se mandan para el gráfico de puntos
 MIN_GANANCIA_CONFIABLE = 0.02  # "Más confiable" supera a la recomendada por al menos 2 puntos de éxito
 
 
@@ -75,7 +76,7 @@ def _estrategias(solicitud: dict, requisitos: list[dict]) -> dict:
     MAX_PERDIDA_ECONOMICA de éxito; "Más confiable", la de mayor éxito si supera al #1 por al menos
     MIN_GANANCIA_CONFIABLE. Si nadie lo cumple, la tarjeta se llena con la siguiente del ranking como "Alternativa".
     """
-    base = api.consultar_ranking(solicitud, requisitos)
+    base = api.consultar_ranking(solicitud, requisitos, muestra=MUESTRA_MC)
     resultado = {"respuesta": base, "estrategias": {}, "perfiles": {"equilibrada": base["pesos"]}}
     if base["sin_opcion"]:
         return resultado
