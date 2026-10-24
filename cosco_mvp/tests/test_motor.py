@@ -101,3 +101,36 @@ def test_decision_y_cierre_actualizan_el_bandido(tmp_path):
         api.registrar_decision(sid, "MultiModal Colombia", "RutaSegura Logística", engine=e)
     cierre = api.cerrar_servicio(dec["decision_id"], True, 30.0, 6.5e6, engine=e)
     assert 0 < cierre["confiabilidad_nueva"] < 1
+    assert "confiabilidad_anterior" in cierre
+    with pytest.raises(ValueError):  # un servicio se cierra una sola vez
+        api.cerrar_servicio(dec["decision_id"], True, 30.0, 6.5e6, engine=e)
+
+
+def test_en_transito_solo_desde_asignada(tmp_path):
+    if not BD.exists():
+        pytest.skip("falta data/cosco.db")
+    from cosco import solicitudes
+
+    copia = tmp_path / "copia.db"
+    shutil.copy(BD, copia)
+    e = get_engine(f"sqlite:///{copia}")
+    crear_faltantes(e)
+    s = solicitudes.crear(dict(URGENTE, plazo_horas=36, contacto="Prueba"), engine=e)
+    with pytest.raises(ValueError):
+        solicitudes.marcar_en_transito(s["id"], engine=e)
+    api.registrar_decision(s["id"], "RutaSegura Logística", "RutaSegura Logística", 0.9, engine=e)
+    assert solicitudes.marcar_en_transito(s["id"], engine=e)["estado"] == "En tránsito"
+    assert solicitudes.obtener(s["id"], engine=e)["decision_id"]
+
+
+def test_tablero_de_gerencia_cuadra(d):
+    from cosco import gerencia
+
+    t = gerencia.tablero(6, engine=get_engine(f"sqlite:///{BD}"))
+    json.dumps(t)
+    assert t["resumen"]["servicios"] > 0 and 0 < t["resumen"]["otd"] < 1
+    assert len(t["tendencia"]["meses"]) == 12 == len(t["tendencia"]["mercado"])
+    assert all(len(f["libres"]) == len(t["capacidad"]["dias"]) for f in t["capacidad"]["filas"])
+    assert all(0 <= f["libres"] <= f["totales"] for f in t["flota"])
+    peor = t["cambios"][0]
+    assert peor["proveedor"] == "Antioquia Freight" and peor["cambio"] < 0  # la verdad oculta: empeoró desde junio

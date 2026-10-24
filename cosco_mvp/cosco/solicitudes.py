@@ -1,6 +1,6 @@
 """Solicitudes que llegan del portal del cliente y se atienden en el dashboard (misma BD, dos aplicaciones).
 
-Estados de `solicitudes.estado`: pendiente (Recibida) -> en_analisis -> asignada -> atendida (Cerrada).
+Estados de `solicitudes.estado`: pendiente (Recibida) -> en_analisis -> asignada -> en_transito -> atendida (Cerrada).
 Nota: por convención del seeder, `solicitudes.fecha_solicitud` guarda la fecha de CARGUE; la hora en que llegó
 la solicitud está en `solicitudes_portal.creada`.
 """
@@ -18,7 +18,8 @@ from cosco.db.migrar import crear_faltantes
 from cosco.motor import api
 from cosco.motor.datos import politicas
 
-ESTADO_PUBLICO = {"pendiente": "Recibida", "en_analisis": "En análisis", "asignada": "Asignada", "atendida": "Cerrada"}
+ESTADO_PUBLICO = {"pendiente": "Recibida", "en_analisis": "En análisis", "asignada": "Asignada", "en_transito": "En tránsito",
+                  "atendida": "Cerrada"}
 PASOS = ["Recibida", "En análisis", "Asignada", "En tránsito", "Cerrada"]
 
 
@@ -93,26 +94,34 @@ def bandeja(engine: Engine | None = None) -> list[dict]:
     with engine.connect() as cx:
         filas = cx.execute(_consulta().order_by(m.Solicitud.id.desc()).limit(60)).all()
         elegidos = _elegidos(cx, [r.id for r in filas])
-    return [dict(_fila(r, None), proveedor_elegido=elegidos.get(r.id)) for r in filas]
+    return [dict(_fila(r, None), **elegidos.get(r.id, _SIN_DECISION)) for r in filas]
 
 
-def _elegidos(cx, ids: list[int]) -> dict[int, str]:
-    """Proveedor que eligió la persona de operaciones en cada solicitud ya asignada (la última decisión)."""
+_SIN_DECISION = dict(proveedor_elegido=None, decision_id=None, exito_predicho=None, resultado_a_tiempo=None,
+                     resultado_costo_cop=None)
+
+
+def _elegidos(cx, ids: list[int]) -> dict[int, dict]:
+    """La última decisión de cada solicitud ya asignada: a quién se eligió y, si ya cerró, cómo le fue."""
     if not ids:
         return {}
-    filas = cx.execute(select(m.Decision.solicitud_id, m.Proveedor.nombre).join(m.Proveedor, m.Proveedor.id == m.Decision.proveedor_elegido_id)
+    filas = cx.execute(select(m.Decision.solicitud_id, m.Decision.id, m.Decision.exito_predicho, m.Decision.resultado_a_tiempo,
+                              m.Decision.resultado_costo_cop, m.Proveedor.nombre)
+                       .join(m.Proveedor, m.Proveedor.id == m.Decision.proveedor_elegido_id)
                        .where(m.Decision.solicitud_id.in_(ids)).order_by(m.Decision.id)).all()
-    return {f.solicitud_id: f.nombre for f in filas}
+    return {f.solicitud_id: dict(proveedor_elegido=f.nombre, decision_id=f.id, exito_predicho=f.exito_predicho,
+                                 resultado_a_tiempo=f.resultado_a_tiempo, resultado_costo_cop=f.resultado_costo_cop)
+            for f in filas}
 
 
 def obtener(sid: int, engine: Engine | None = None) -> dict:
     engine = _engine(engine)
     with engine.connect() as cx:
         r = cx.execute(_consulta().where(m.Solicitud.id == sid)).first()
-        elegido = _elegidos(cx, [sid]).get(sid)
+        elegido = _elegidos(cx, [sid]).get(sid, _SIN_DECISION)
     if r is None:
         raise KeyError(sid)
-    return dict(_fila(r, None), proveedor_elegido=elegido)
+    return dict(_fila(r, None), **elegido)
 
 
 def a_dict_motor(s: dict) -> dict:
@@ -127,3 +136,14 @@ def marcar_en_analisis(sid: int, engine: Engine | None = None) -> None:
     with engine.begin() as cx:
         cx.execute(update(m.Solicitud).where((m.Solicitud.id == sid) & (m.Solicitud.estado == "pendiente"))
                    .values(estado="en_analisis"))
+
+
+def marcar_en_transito(sid: int, engine: Engine | None = None) -> dict:
+    """El vehículo salió: de Asignada a En tránsito. Solo desde asignada."""
+    engine = _engine(engine)
+    with engine.begin() as cx:
+        n = cx.execute(update(m.Solicitud).where((m.Solicitud.id == sid) & (m.Solicitud.estado == "asignada"))
+                       .values(estado="en_transito")).rowcount
+    if not n:
+        raise ValueError("Solo una solicitud asignada puede pasar a En tránsito.")
+    return estado_publico(sid, engine)

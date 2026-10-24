@@ -21,4 +21,7 @@ export const Api = {
   proveedor: (nombre) => get(`/api/proveedor/${encodeURIComponent(nombre)}`),
   memoria: (proveedor, destino) => get(`/api/memoria?proveedor=${encodeURIComponent(proveedor || "")}&destino=${encodeURIComponent(destino || "")}`),
   decision: (cuerpo) => post("/api/decision", cuerpo),
+  transito: (id) => post(`/api/solicitudes/${id}/transito`, {}),
+  cerrar: (cuerpo) => post("/api/cerrar", cuerpo),
+  gerencia: (f) => get(`/api/gerencia?${new URLSearchParams(Object.entries(f).filter(([, v]) => v !== "" && v != null))}`),
 };

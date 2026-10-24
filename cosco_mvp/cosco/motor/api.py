@@ -216,11 +216,14 @@ def cerrar_servicio(decision_id: int, a_tiempo: bool, tiempo_real_h: float, cost
     d = datos(engine, recargar=True)  # la solicitud puede ser nueva
     with engine.connect() as cx:
         dec = cx.execute(select(m.Decision).where(m.Decision.id == decision_id)).mappings().one()
+    if dec["resultado_a_tiempo"] is not None:
+        raise ValueError(f"La decisión {decision_id} ya tiene su servicio cerrado.")
     sol = armar_solicitud(d, int(dec["solicitud_id"]))
     pid = int(dec["proveedor_elegido_id"])
     ruta = _ruta(d, sol.origen_id, sol.destino_id, sol.tipo_carga_id, sol.tipo_vehiculo_id, sol.unidades,
                  sol.plazo_h, sol.presupuesto_cop, sol.fecha)
     tarifa = tarifa_vigente(d, pid, sol.tipo_vehiculo_id, sol.fecha) or (0.0, 0.0)
+    antes = bandido.posterior(d, pid, ruta.segmento)
     flota = d.vehiculos[(d.vehiculos.proveedor_id == pid) & (d.vehiculos.tipo_vehiculo_id == sol.tipo_vehiculo_id)]
     conductor = d.conductores[d.conductores.proveedor_id == pid].index[0]
     with engine.begin() as cx:
@@ -239,7 +242,8 @@ def cerrar_servicio(decision_id: int, a_tiempo: bool, tiempo_real_h: float, cost
     b = bandido.posterior(d, pid, ruta.segmento)
     guardar_estado_bandit(engine, [dict(proveedor_id=pid, segmento=ruta.segmento, alfa=b.alfa, beta=b.beta)])
     return dict(decision_id=decision_id, proveedor=d.nombre("proveedores", pid), segmento=ruta.segmento,
-                confiabilidad_nueva=round(b.media, 3), servicios_en_segmento=round(b.n_efectivo, 1))
+                confiabilidad_anterior=round(antes.media, 3), confiabilidad_nueva=round(b.media, 3),
+                servicios_en_segmento=round(b.n_efectivo, 1))
 
 
 def guardar_estado_bandit(engine: Engine | None = None, filas: list[dict] | None = None) -> int:

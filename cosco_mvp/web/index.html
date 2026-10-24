@@ -15,15 +15,16 @@
     <svg class="mark" width="28" height="28" viewBox="0 0 28 28" role="img" aria-label="Copiloto de asignación">
       <rect x="2" y="5" width="24" height="18" rx="6" fill="#131416"/><circle cx="10" cy="14" r="2.2" fill="#fff"/><circle cx="18" cy="14" r="2.2" fill="#fff"/>
     </svg>
-    <a href="/" data-tip="Solicitudes" aria-label="Solicitudes" aria-current="page">
+    <a href="#solicitudes" data-tip="Solicitudes" aria-label="Solicitudes" data-ruta="solicitudes" aria-current="page">
       <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/><circle cx="18" cy="16" r="3"/></svg></a>
-    <a href="#" data-tip="Gerencia (siguiente entrega)" aria-label="Gerencia, siguiente entrega" aria-disabled="true" tabindex="-1" style="opacity:.45;pointer-events:none">
+    <a href="#gerencia" data-tip="Gerencia" aria-label="Gerencia" data-ruta="gerencia">
       <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></a>
   </nav>
 
   <div class="main">
     <header class="topbar">
-      <span class="crumb"><strong>Asignación de transporte</strong> · Operaciones Colombia</span>
+      <span class="crumb" id="crumb"><strong>Asignación de transporte</strong> · Operaciones Colombia</span>
+      <nav class="nav-movil" aria-label="Pantallas"><a href="#solicitudes" data-ruta="solicitudes" aria-current="page">Solicitudes</a><a href="#gerencia" data-ruta="gerencia">Gerencia</a></nav>
       <span class="grow"></span>
       <label class="sr-only" for="estado-datos">Estado de los datos</label>
       <select id="estado-datos" title="Para probar cómo se ve cada estado">
@@ -39,6 +40,7 @@
       <section class="lista" aria-label="Solicitudes" id="lista"></section>
       <main class="detalle" id="detalle" aria-live="polite"></main>
     </div>
+    <main class="sheet-ger" id="gerencia" hidden></main>
   </div>
 </div>
 

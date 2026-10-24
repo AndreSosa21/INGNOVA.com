@@ -57,6 +57,17 @@ el portal del cliente muestra "Asignada". Las solicitudes viven en `solicitudes`
 `web/` y `portal/` son front sin paso de build; la UI no calcula nada, solo consume el contrato del motor. Elegir un proveedor
 escribe en `decisiones` de la BD configurada. El portal usa una foto con licencia CC BY 3.0 (crédito en su pie).
 
+**Seguimiento y cierre.** En "En curso", una solicitud asignada se marca "En tránsito" cuando sale el vehículo y luego se
+registra cómo llegó (tiempo real, costo final, daño, calificación). Eso llama a `cerrar_servicio`: el servicio entra al
+historial, la solicitud pasa a "Cerrada" (el cliente lo ve en el portal) y el bandido actualiza la confiabilidad del
+proveedor en ese segmento (la pantalla muestra el antes y el después). Un servicio se cierra una sola vez.
+
+**Gerencia** (`http://localhost:8001/#gerencia`, `GET /api/gerencia?meses=6&region=&tipo_vehiculo=`, lógica en
+`cosco/gerencia.py`): los tableros que pide COSCO. Resumen del periodo contra el anterior (servicios, puntualidad, costo
+real por km, sobrecosto, daños, decisiones), puntualidad mes a mes del mercado y de un proveedor, quién cambió, tiempos de
+tránsito por corredor (P50 a P90 contra el estándar), tarifas vigentes y costo real por km, capacidad de los próximos 14
+días por proveedor y disponibilidad de la flota hoy por tipo de vehículo.
+
 ## Memoria del asistente con búsqueda semántica (pgvector)
 
 Solo para Supabase. Agrega la columna `embedding` a `casos_memoria` y la llena, **sin tocar los demás datos**:

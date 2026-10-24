@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from cosco import solicitudes
+from cosco import gerencia, solicitudes
 from cosco.motor import api
 from cosco.motor.datos import politicas
 
@@ -57,6 +57,7 @@ class Cierre(BaseModel):
     tiempo_real_h: float
     costo_final_cop: float
     dano_carga: bool = False
+    calificacion_cliente: int = Field(5, ge=1, le=5)
 
 
 def _estrategias(solicitud: dict, requisitos: list[dict]) -> dict:
@@ -115,7 +116,21 @@ def decision(d: Decision):
 
 @app.post("/api/cerrar")
 def cerrar(c: Cierre):
-    return api.cerrar_servicio(c.decision_id, c.a_tiempo, c.tiempo_real_h, c.costo_final_cop, c.dano_carga)
+    """Registra cómo salió el servicio. El bandido aprende de esto; la solicitud pasa a Cerrada."""
+    try:
+        return api.cerrar_servicio(c.decision_id, c.a_tiempo, c.tiempo_real_h, c.costo_final_cop, c.dano_carga,
+                                   c.calificacion_cliente)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+
+
+@app.get("/api/gerencia")
+def tablero_gerencia(meses: int = 6, region: str | None = None, tipo_vehiculo: str | None = None):
+    """Tableros de gerencia: precios, tiempos, capacidad, flota y tendencias (ver cosco/gerencia.py)."""
+    try:
+        return gerencia.tablero(meses, region or None, tipo_vehiculo or None)
+    except KeyError as e:
+        raise HTTPException(422, f"No existe {e}") from e
 
 
 @app.get("/api/bandeja")
@@ -146,6 +161,14 @@ def solicitud(sid: int):
 def analisis(sid: int):
     solicitudes.marcar_en_analisis(sid)
     return solicitudes.estado_publico(sid)
+
+
+@app.post("/api/solicitudes/{sid}/transito")
+def transito(sid: int):
+    try:
+        return solicitudes.marcar_en_transito(sid)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
 
 
 EJEMPLOS = [
