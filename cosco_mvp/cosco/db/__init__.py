@@ -28,5 +28,16 @@ def database_url() -> str:
     return url
 
 
+_ENGINES: dict[str, Engine] = {}
+
+
 def get_engine(url: str | None = None) -> Engine:
-    return create_engine(url or database_url(), pool_pre_ping=True)
+    """Un engine (y su pool de conexiones) por URL y por proceso.
+
+    Crear uno nuevo en cada llamada abría conexiones nuevas al pooler de Supabase cada vez que el dashboard
+    sondeaba la bandeja, hasta llenar su límite de clientes.
+    """
+    url = url or database_url()
+    if url not in _ENGINES:
+        _ENGINES[url] = create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
+    return _ENGINES[url]

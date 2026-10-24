@@ -15,10 +15,15 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from cosco import solicitudes
-from cosco.motor.datos import politicas
+from cosco.motor.datos import politicas, precargar
 
 RAIZ = Path(__file__).resolve().parent.parent
 app = FastAPI(title="Portal del cliente · COSCO")
+
+
+@app.on_event("startup")
+def _precargar():
+    precargar()
 
 
 class Pedido(BaseModel):

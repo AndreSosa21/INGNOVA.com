@@ -6,6 +6,7 @@ cada consulta del ranking tarda menos de un segundo.
 from __future__ import annotations
 
 import math
+import threading
 import tomllib
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -14,6 +15,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from cosco.db import get_engine
@@ -90,13 +92,30 @@ class Datos:
         return str(getattr(self, tabla).at[int(id_), "nombre"])
 
 
-def _leer(engine: Engine, tabla: str, indice: str | None = "id") -> pd.DataFrame:
-    df = pd.read_sql_table(tabla, engine)
+def _leer(engine, tabla: str, indice: str | None = "id") -> pd.DataFrame:
+    """Lee una tabla entera. `engine` puede ser un Engine o una Connection abierta (Postgres usa una sola)."""
+    if engine.dialect.name == "postgresql":
+        # read_sql_table refleja el esquema de cada tabla (decenas de consultas al catálogo): contra Supabase eso
+        # costaba más de un minuto. Un SELECT simple trae los mismos tipos; las fechas DATE se pasan a datetime64.
+        df = pd.read_sql(text(f'SELECT * FROM "{tabla}"'), engine)
+        for c in df.columns[df.dtypes == object]:
+            v = df[c].dropna()
+            if len(v) and isinstance(v.iloc[0], date):
+                df[c] = pd.to_datetime(df[c])
+    else:
+        df = pd.read_sql_table(tabla, engine)
     return df.set_index(indice) if indice else df
 
 
 def cargar_datos(engine: Engine | None = None, hoy: date | None = None) -> Datos:
     engine = engine or get_engine()
+    if engine.dialect.name == "postgresql":
+        with engine.connect() as cx:  # una sola conexión para las ~15 tablas
+            return _cargar(cx, hoy)
+    return _cargar(engine, hoy)
+
+
+def _cargar(engine, hoy: date | None) -> Datos:
     pol = politicas()
     hoy = hoy or pol["fechas"]["hoy"]
 
@@ -149,15 +168,32 @@ def cargar_datos(engine: Engine | None = None, hoy: date | None = None) -> Datos
 
 
 _CACHE: dict[str, Datos] = {}
+_CANDADO = threading.Lock()
 
 
 def datos(engine: Engine | None = None, recargar: bool = False) -> Datos:
-    """Datos en memoria, cargados una vez por BD. `recargar=True` después de cerrar servicios."""
+    """Datos en memoria, cargados una vez por BD. `recargar=True` después de cerrar servicios.
+
+    Con candado: si el servidor está precargando al arrancar, una petición que llega espera esa misma carga.
+    """
     engine = engine or get_engine()
     clave = str(engine.url)
-    if recargar or clave not in _CACHE:
-        _CACHE[clave] = cargar_datos(engine)
-    return _CACHE[clave]
+    with _CANDADO:
+        if recargar or clave not in _CACHE:
+            _CACHE[clave] = cargar_datos(engine)
+        return _CACHE[clave]
+
+
+def precargar() -> threading.Thread:
+    """Carga los datos en segundo plano al arrancar el servidor, para que la primera solicitud no espere."""
+    def _cargar_en_fondo():
+        try:
+            datos()
+        except Exception as e:  # sin BD el servidor igual arranca; la primera petición mostrará el error
+            print(f"[datos] no se pudieron precargar: {e}")
+    hilo = threading.Thread(target=_cargar_en_fondo, name="precarga-datos", daemon=True)
+    hilo.start()
+    return hilo
 
 
 def a_fecha(x) -> date:

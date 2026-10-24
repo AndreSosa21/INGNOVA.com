@@ -18,10 +18,15 @@ from pydantic import BaseModel, Field
 
 from cosco import gerencia, solicitudes
 from cosco.motor import api
-from cosco.motor.datos import politicas
+from cosco.motor.datos import politicas, precargar
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 app = FastAPI(title="Copiloto de asignación · COSCO")
+
+
+@app.on_event("startup")
+def _precargar():
+    precargar()
 
 ESTRATEGIAS = (("equilibrada", None), ("economica", "Costo"), ("confiable", "Crítico"))
 
