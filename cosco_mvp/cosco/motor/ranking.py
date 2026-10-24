@@ -474,22 +474,29 @@ def dividir(d: Datos, sol: Solicitud, candidatos: list[Evaluado], parciales: lis
     )
 
 
-def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado], rng) -> list[dict]:
-    """Nadie cumple: probar una relajación a la vez y decir cuántos proveedores aparecen con cada una."""
+def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado], rng,
+            minimo: float | None = None) -> list[dict]:
+    """Probar una relajación a la vez y decir cuántos proveedores aparecen con cada una.
+
+    Sin `minimo`, nadie cumple y sirve cualquier cambio que abra opciones. Con `minimo`, sí hay opción pero es débil:
+    solo cuentan los cambios cuyo mejor proveedor (o carga dividida) llega a ese % de éxito, y también se prueba
+    ampliar el plazo y el presupuesto que dio el cliente aunque no sean restricciones.
+    """
     alternativas = []
 
     pesos, _ = pesos_finales(sol, req)
 
     def probar(descripcion: str, s2: Solicitud, r2: Requisitos, cambio: dict):
         c, p, _, _ = _evaluar(d, s2, r2, 1000, rng)
-        if c:
-            mejor = max(c, key=lambda e: e.mc.p_exito)
-            alternativas.append(dict(cambio=cambio, descripcion=f"{descripcion}, aparecen {len(c)} proveedor(es)",
+        mejor = max(c, key=lambda e: e.mc.p_exito) if c else None
+        if mejor is not None and (minimo is None or mejor.mc.p_exito >= minimo):
+            efecto = f"aparecen {len(c)} proveedor(es)" if minimo is None else f"el éxito sube a {mejor.mc.p_exito:.0%}"
+            alternativas.append(dict(cambio=cambio, descripcion=f"{descripcion}, {efecto}",
                                      proveedores=[e.nombre for e in c], mejor=mejor.nombre,
                                      p_exito_mejor=round(mejor.mc.p_exito, 3)))
             return True
         div = dividir(d, s2, c, p, pesos)
-        if div:
+        if div and (minimo is None or div["p_exito_conjunta"] >= minimo):
             quienes = " y ".join(f"{x['proveedor']} ({x['unidades']})" for x in div["reparto"])
             alternativas.append(dict(cambio=dict(cambio, dividir=True),
                                      descripcion=f"{descripcion} y se divide la carga entre {quienes}",
@@ -530,7 +537,22 @@ def cascada(d: Datos, sol: Solicitud, req: Requisitos, parciales: list[Evaluado]
     if req.sin_incidentes_dias is not None:
         probar("Si se acepta a proveedores con imprevistos recientes", sol, replace(req, sin_incidentes_dias=None),
                dict(sin_incidentes=False))
-    if not alternativas:
+    if minimo is not None and req.plazo_h is None:
+        for extra in (12, 24, 48):
+            if probar(f"Si el cliente da {extra} h más de plazo", replace(sol, plazo_h=sol.plazo_h + extra), req,
+                      dict(plazo_horas=sol.plazo_h + extra)):
+                break
+    if minimo is not None and sol.presupuesto_cop and req.precio_max is None:
+        for pct in (10, 20, 30):
+            if probar(f"Si el presupuesto del cliente sube {pct} %",
+                      replace(sol, presupuesto_cop=sol.presupuesto_cop * (1 + pct / 100)), req,
+                      dict(presupuesto_cop=round(sol.presupuesto_cop * (1 + pct / 100), -3))):
+                break
+    if not alternativas and minimo is not None:
+        alternativas.append(dict(cambio={}, proveedores=[], mejor=None, p_exito_mejor=None, descripcion=(
+            f"Ningún cambio de una sola condición lleva el éxito a {minimo:.0%}. Conviene hablar con el cliente: "
+            "combinar dos cambios (fecha y presupuesto, por ejemplo) o partir el envío.")))
+    elif not alternativas:
         alternativas.append(dict(cambio={}, proveedores=[], mejor=None, p_exito_mejor=None, descripcion=(
             "Ningún proveedor de la red puede atenderla ni relajando una condición a la vez. Opciones: partir el envío "
             "en varias fechas, combinar dos cambios o cotizar con un proveedor fuera de la red.")))
@@ -606,7 +628,17 @@ def calcular(d: Datos, solicitud: dict | int | Solicitud, requisitos: list[dict]
                                     motivo=f"{b.nombre} es igual o mejor en costo, tiempo P90 y % de éxito"))
     ordenados = ordenar(candidatos, sol, rng)
     division = dividir(d, sol, candidatos, parciales, pesos)
-    alternativas = cascada(d, sol, req, parciales, rng) if not ordenados else []
+    pol_c = politicas()["cascada"]
+    if division and (division["p_exito_conjunta"] < pol_c["division_exito_minimo"]
+                     or (ordenados and division["p_exito_conjunta"] < ordenados[0].mc.p_exito)):
+        division = None  # dividir solo se muestra si sirve: no es casi segura de fallar ni peor que el mejor individual
+    if not ordenados:
+        alternativas = cascada(d, sol, req, parciales, rng)
+    elif ordenados[0].mc.p_exito < pol_c["exito_debil"]:  # hay opción, pero débil: qué cambio la mejora
+        alternativas = cascada(d, sol, req, parciales, rng,
+                               minimo=min(ordenados[0].mc.p_exito + pol_c["mejora_minima"], 0.99))
+    else:
+        alternativas = []
     nombres = dict(origen=d.nombre("ciudades", sol.origen_id), destino=d.nombre("ciudades", sol.destino_id),
                    tipo_carga=d.nombre("tipos_carga", sol.tipo_carga_id),
                    tipo_vehiculo=d.nombre("tipos_vehiculo", sol.tipo_vehiculo_id))

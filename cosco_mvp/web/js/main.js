@@ -3,7 +3,7 @@
 import { Api } from "./api.js";
 import { esc, cop, pct, pct0, horas, plazo, dec, num, fechaCorta, corto } from "./fmt.js";
 import {
-  ESTRATEGIAS, FACTORES, TarjetaOpcion, DetalleOpcion, ChipFactor, siguienteEstado, FiltroFijo, ListaDescartados, BarrasContribucion,
+  ESTRATEGIAS, nombreDe, FACTORES, TarjetaOpcion, DetalleOpcion, ChipFactor, siguienteEstado, FiltroFijo, ListaDescartados, BarrasContribucion,
   DiferenciaPorFactor, Esqueleto, Estado, GraficoCostoP90, Pasos, SemaforoRiesgo,
 } from "./componentes.js";
 import { crearCopiloto } from "./copiloto.js";
@@ -125,7 +125,7 @@ async function refrescar() {
       const slot = Object.values(previas).find((o) => o.proveedor === proveedor);
       const nuevo = slot && d.estrategias[slot.estrategia];
       S.aviso = { texto: nuevo
-        ? `${proveedor} no tiene capacidad. Para la opción ${ESTRATEGIAS[slot.estrategia].nombre.toLowerCase()} entra ${nuevo.proveedor}: ${pct0(nuevo.p_exito)} de éxito y ${cop(nuevo.costo_esperado_cop)} esperado (antes ${cop(slot.costo_esperado_cop)}).`
+        ? `${proveedor} no tiene capacidad. Para la opción ${nombreDe(nuevo).toLowerCase()} entra ${nuevo.proveedor}: ${pct0(nuevo.p_exito)} de éxito y ${cop(nuevo.costo_esperado_cop)} esperado (antes ${cop(slot.costo_esperado_cop)}).`
         : `${proveedor} no tiene capacidad y no queda un reemplazo individual.`, deshacer: proveedor };
       S.pendienteCapacidad = null;
     }
@@ -142,9 +142,11 @@ async function refrescar() {
 function hallazgo() {
   const [eq, eco, conf] = ["equilibrada", "economica", "confiable"].map((k) => S.data.estrategias[k]);
   if (!eq) return "Nadie cumple solo con lo que pide el cliente. Abajo está por qué y qué se puede cambiar.";
-  let t = `Recomiendo <strong>${esc(eq.proveedor)}</strong>: ${pct0(eq.p_exito)} de éxito y ${cop(eq.costo_esperado_cop)} de costo esperado.`;
+  const debil = S.data.respuesta.alternativas.length > 0;
+  let t = `${debil ? "La mejor disponible es" : "Recomiendo"} <strong>${esc(eq.proveedor)}</strong>: ${pct0(eq.p_exito)} de éxito y ${cop(eq.costo_esperado_cop)} de costo esperado.`;
   if (eco) { const dc = eco.costo_esperado_cop - eq.costo_esperado_cop; t += ` ${esc(corto(eco.proveedor))} ${dc < 0 ? `ahorra ${cop(-dc)}` : `cuesta ${cop(dc)} más`}${eco.p_exito < eq.p_exito ? ` pero baja el éxito ${dec((eq.p_exito - eco.p_exito) * 100)} puntos` : ""}.`; }
-  if (conf && conf.proveedor !== eq.proveedor) t += ` ${esc(corto(conf.proveedor))} es la más confiable (${pct0(conf.p_exito)}).`;
+  if (conf && conf.etiqueta === "Más confiable") t += ` ${esc(corto(conf.proveedor))} es la más confiable (${pct0(conf.p_exito)}).`;
+  if (debil) t += ` Es bajo: antes de elegir, mira abajo qué cambio lo sube.`;
   return t;
 }
 
@@ -198,7 +200,7 @@ function seccionPorque(ops) {
   const factores = ["precio", "tiempo", "confiabilidad", "historial", "holgura", "segmento"].filter((f) => ops.some((o) => (o.aportes[f] ?? 0) > 0));
   return `<details class="d" data-d="porque" ${S.abiertos.has("porque") ? "open" : ""}><summary><span>Por qué estas tres<span class="sub">de dónde sale cada puntaje</span></span></summary><div class="d-body">
     <div class="dos"><div>
-      <div class="leyenda" style="margin-bottom:12px">${ops.map((o, i) => `<span><i style="background:${["var(--accent)", "var(--faint)", "var(--control)"][i]}"></i>${ESTRATEGIAS[o.estrategia].nombre}: ${esc(corto(o.proveedor))} (${dec(o.puntaje)})</span>`).join("")}</div>
+      <div class="leyenda" style="margin-bottom:12px">${ops.map((o, i) => `<span><i style="background:${["var(--accent)", "var(--faint)", "var(--control)"][i]}"></i>${nombreDe(o)}: ${esc(corto(o.proveedor))} (${dec(o.puntaje)})</span>`).join("")}</div>
       ${BarrasContribucion(ops, factores)}
       <p class="explica" style="margin-top:12px">Las tres usan el mismo motor y los mismos datos; solo cambia cuánto pesa cada factor.</p></div>
     <div>${p ? `<p class="sub-h">¿Por qué no el segundo?</p><p style="margin-bottom:12px">${esc(p.texto)}</p>${DiferenciaPorFactor(p.por_factor)}${p.contrafactual ? `<p class="explica" style="margin-top:12px">${esc(p.contrafactual)}</p>` : ""}
@@ -210,16 +212,21 @@ function seccionExperta(ops) {
   const filas = [["Puntaje", (o) => dec(o.puntaje)], ["Éxito", (o) => pct0(o.p_exito)], ["A tiempo", (o) => pct0(o.p_a_tiempo)], ["Daño", (o) => pct0(o.p_dano)], ["Costo esperado", (o) => cop(o.costo_esperado_cop)], ["Costo en el peor 10%", (o) => cop(o.costo_p90_cop)], ["Tiempo típico (P50)", (o) => horas(o.tiempo_p50_h)], ["Tiempo hasta (P90)", (o) => horas(o.tiempo_p90_h)], ["Confiabilidad", (o) => pct0(o.confiabilidad)], ["Servicios en el segmento", (o) => num(o.servicios_en_segmento)], ["Libres", (o) => num(o.vehiculos_libres)]];
   return `<details class="d" data-d="experta" ${S.abiertos.has("experta") ? "open" : ""}><summary><span>Vista experta<span class="sub">costo contra tiempo y comparador</span></span></summary><div class="d-body">
     <div>${GraficoCostoP90(d.respuesta.ranking, d.estrategias, S.solicitud.plazo_horas)}<p class="explica" style="margin-top:12px">P90 es el tiempo que el proveedor no pasa en 9 de cada 10 viajes. Abajo y a la izquierda es más barato y más rápido.</p></div>
-    <div style="overflow:auto"><table class="tabla"><thead><tr><th>Medida</th>${ops.map((o) => `<th class="r">${ESTRATEGIAS[o.estrategia].nombre}<br><span>${esc(corto(o.proveedor))}</span></th>`).join("")}</tr></thead><tbody>${filas.map(([k, f]) => `<tr><td>${k}</td>${ops.map((o) => `<td class="r num">${f(o)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div></details>`;
+    <div style="overflow:auto"><table class="tabla"><thead><tr><th>Medida</th>${ops.map((o) => `<th class="r">${nombreDe(o)}<br><span>${esc(corto(o.proveedor))}</span></th>`).join("")}</tr></thead><tbody>${filas.map(([k, f]) => `<tr><td>${k}</td>${ops.map((o) => `<td class="r num">${f(o)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div></details>`;
 }
 
 function vistaSinOpcion() {
   const r = S.data.respuesta, cd = r.carga_dividida;
-  return `<div class="cuando-no" style="background:var(--raised);border-radius:8px;padding:20px"><h3 style="font-size:18px;font-weight:600;margin-bottom:6px">Ningún proveedor cumple solo</h3><p>Con lo que pide el cliente nadie sale como opción individual. No relajo nada por mi cuenta: abajo hay una carga dividida y los cambios que abren opciones.</p></div>
-    ${cd ? `<div class="dos"><div class="d" style="border:1px solid var(--border);border-radius:8px;padding:20px"><p class="sub-h">Carga dividida</p>
+  return `<div class="cuando-no" style="background:var(--raised);border-radius:8px;padding:20px"><h3 style="font-size:18px;font-weight:600;margin-bottom:6px">Ningún proveedor cumple solo</h3><p>Con lo que pide el cliente nadie sale como opción individual. No relajo nada por mi cuenta: ${cd ? "abajo hay una carga dividida y los cambios que abren opciones" : "abajo están los cambios que abren opciones"}.</p></div>
+    ${cd || r.alternativas.length ? `<div class="dos">` : ""}${cd ? `<div class="d" style="border:1px solid var(--border);border-radius:8px;padding:20px"><p class="sub-h">Carga dividida</p>
       <table class="tabla"><thead><tr><th>Proveedor</th><th class="r">Unidades</th><th class="r">Éxito</th></tr></thead><tbody>${cd.reparto.map((x) => `<tr><td>${esc(x.proveedor)}</td><td class="r num">${x.unidades}</td><td class="r num">${pct0(x.p_exito)}</td></tr>`).join("")}</tbody></table>
       <p style="margin-top:12px"><strong class="num" style="font-size:24px">${pct0(cd.p_exito_conjunta)}</strong> de éxito conjunto · ${cop(cd.costo_esperado_cop)} esperado · hasta ${horas(cd.tiempo_p90_h)}</p><p class="explica" style="margin-top:8px">${esc(cd.nota)}</p></div>
-      ${r.alternativas.length ? `<div style="border:1px solid var(--border);border-radius:8px;padding:20px"><p class="sub-h">Qué puedes cambiar</p><ul class="descartados" style="display:block">${r.alternativas.map((a, i) => `<li style="grid-template-columns:1fr auto"><span>${esc(a.descripcion)}<br><span class="muted num">Mejor: ${esc(a.mejor ?? "carga dividida")} · ${pct0(a.p_exito_mejor)} de éxito</span></span>${a.cambio.fecha || a.cambio.plazo_horas ? `<button class="btn small" type="button" data-act="aplicar-alt" data-i="${i}">Probar</button>` : ""}</li>`).join("")}</ul></div>` : ""}</div>` : ""}`;
+` : ""}${r.alternativas.length ? bloqueAlternativas(r) : ""}${cd || r.alternativas.length ? "</div>" : ""}`;
+}
+
+const CAMBIOS_APLICABLES = ["fecha", "plazo_horas", "presupuesto_cop", "tipo_vehiculo"];
+function bloqueAlternativas(r, titulo = "Qué puedes cambiar") {
+  return `<div style="border:1px solid var(--border);border-radius:8px;padding:20px"><p class="sub-h">${titulo}</p><ul class="descartados" style="display:block">${r.alternativas.map((a, i) => `<li style="grid-template-columns:1fr auto"><span>${esc(a.descripcion)}${a.p_exito_mejor != null ? `<br><span class="muted num">Mejor: ${esc(a.mejor ?? "carga dividida")} · ${pct0(a.p_exito_mejor)} de éxito</span>` : ""}</span>${CAMBIOS_APLICABLES.some((k) => a.cambio[k]) && !a.cambio.dividir ? `<button class="btn small" type="button" data-act="aplicar-alt" data-i="${i}">Probar</button>` : ""}</li>`).join("")}</ul></div>`;
 }
 
 // ---------------------------------------------------------------- servicio: en tránsito y cierre
@@ -296,6 +303,7 @@ async function enviarCierre() {
   c.enviando = false; pintarDetalle();
 }
 
+const enCursoDe = (b) => ["en_transito", "atendida"].includes(b?.estado_clave);
 function pintarDetalle() {
   if (!S.catalogo) { elDetalle.innerHTML = `<div class="detalle-in">${Esqueleto()}</div>`; return; }
   if (!S.base) {
@@ -309,8 +317,10 @@ function pintarDetalle() {
   else if (S.status === "vacio") cuerpo = Estado("No hay opciones para mostrar", "Cambia las condiciones o vuelve a lo que pidió el cliente.");
   else {
     const d = S.data, ops = opciones();
-    const cuerpoOpc = d.respuesta.sin_opcion ? vistaSinOpcion() : `<div class="cards">${ops.map((o) => TarjetaOpcion(o, { solicitud: d.respuesta.solicitud, opciones: ops, asignado: S.asignado })).join("")}</div>`;
-    const enCurso = ["en_transito", "atendida"].includes(S.base.estado_clave);
+    const debil = !d.respuesta.sin_opcion && d.respuesta.alternativas.length && !enCursoDe(S.base)
+      ? `<div style="margin-top:16px">${bloqueAlternativas(d.respuesta, `La mejor opción tiene ${pct0(ops[0].p_exito)} de éxito. Qué la puede mejorar`)}</div>` : "";
+    const cuerpoOpc = d.respuesta.sin_opcion ? vistaSinOpcion() : `<div class="cards">${ops.map((o) => TarjetaOpcion(o, { solicitud: d.respuesta.solicitud, opciones: ops, asignado: S.asignado })).join("")}</div>${debil}`;
+    const enCurso = enCursoDe(S.base);
     cuerpo = `${seccionServicio()}${enCurso ? `<p class="sub-h" style="margin:8px 0 -8px">Las opciones que se compararon</p>` : `<p class="hallazgo">${hallazgo()}</p>`}${avisos()}${cuerpoOpc}
       <div class="mas">${seccionAjustar()}${d.respuesta.sin_opcion ? "" : seccionPorque(ops)}<details class="d" data-d="descartados" ${S.abiertos.has("descartados") ? "open" : ""}><summary><span>Descartados<span class="sub">${d.respuesta.descartados.length} proveedores, cada uno con su razón</span></span></summary><div class="d-body">${ListaDescartados(d.respuesta.descartados)}</div></details>${d.respuesta.sin_opcion ? "" : seccionExperta(ops)}</div>`;
   }
@@ -329,7 +339,7 @@ function pintarCajon() {
   const o = S.data?.estrategias?.[S.cajon];
   if (!o) { cerrarCajon(); return; }
   const ctx = { solicitud: S.data.respuesta.solicitud, opciones: opciones(), asignado: S.asignado };
-  elCajon.innerHTML = `<div class="cajon-head"><div><p class="muted">${ESTRATEGIAS[o.estrategia].nombre}</p><h2>${esc(o.proveedor)}</h2>
+  elCajon.innerHTML = `<div class="cajon-head"><div><p class="muted">${nombreDe(o)}</p><h2>${esc(o.proveedor)}</h2>
       <p style="margin-top:8px;display:flex;gap:12px;align-items:center"><strong class="num" style="font-size:24px;font-weight:400">${pct0(o.p_exito)} de éxito</strong>${SemaforoRiesgo(o.semaforo)}</p></div>
       <button class="btn small ghost" type="button" data-act="cerrar-cajon" aria-label="Cerrar detalle">Cerrar</button></div>
     <div class="cajon-body">${DetalleOpcion(o, ctx, S.perfiles.get(o.proveedor))}</div>
@@ -414,7 +424,7 @@ function clic(ev) {
   else if (a === "cerrar-aviso") { S.aviso = null; pintarDetalle(); }
   else if (a === "restablecer") { S.solicitud = motorDe(S.base); refrescar(); }
   else if (a === "reintentar") refrescar();
-  else if (a === "aplicar-alt") { const alt = S.data.respuesta.alternativas[Number(b.dataset.i)]; acciones.solicitud({ ...(alt.cambio.fecha ? { fecha: alt.cambio.fecha } : {}), ...(alt.cambio.plazo_horas ? { plazo_horas: alt.cambio.plazo_horas } : {}) }); }
+  else if (a === "aplicar-alt") { const alt = S.data.respuesta.alternativas[Number(b.dataset.i)]; acciones.solicitud(Object.fromEntries(CAMBIOS_APLICABLES.filter((k) => alt.cambio[k]).map((k) => [k, alt.cambio[k]]))); }
   else if (a === "preguntar") copiloto.preguntar(b.dataset.q);
   else if (a === "transito") Api.transito(S.selId).then((e) => { Object.assign(S.base, { estado_clave: "en_transito", estado: e.estado }); pintarLista(); pintarDetalle(); cargarBandeja(); }).catch((e) => { S.aviso = { texto: e.message }; pintarDetalle(); });
   else if (a === "abrir-cierre") { abrirCierre(); pintarDetalle(); document.getElementById("c-tiempo")?.focus(); }

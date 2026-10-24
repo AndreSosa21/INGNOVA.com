@@ -6,7 +6,11 @@ export const ESTRATEGIAS = {
   economica: { nombre: "Más económica", frase: "Prioriza el precio" },
   confiable: { nombre: "Más confiable", frase: "Prioriza el historial y la puntualidad" },
 };
+/** El nombre de la tarjeta lo mide el servidor: "Alternativa" cuando la etiqueta de la estrategia no sería cierta. */
+export const nombreDe = (o) => o.etiqueta ?? ESTRATEGIAS[o.estrategia].nombre;
+const iconoDe = (o) => ICONOS[o.etiqueta === "Alternativa" ? "alternativa" : o.estrategia];
 const ICONOS = {
+  alternativa: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>',
   equilibrada: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M5 8h14"/><path d="M5 8l-2.5 6a3 3 0 0 0 5 0L5 8zM19 8l-2.5 6a3 3 0 0 0 5 0L19 8z"/></svg>',
   economica: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12h7"/></svg>',
   confiable: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',
@@ -81,11 +85,11 @@ export const incompleto = (o) => o.confianza === "baja" || (o.datos_propios != n
 
 /** La opción en la pantalla principal: tres números, una razón, un sacrificio, y dos acciones. */
 export function TarjetaOpcion(o, ctx) {
-  const e = ESTRATEGIAS[o.estrategia];
+  const nombre = nombreDe(o);
   const sel = ctx.asignado === o.proveedor;
-  return `<article class="card" data-est="${o.estrategia}" data-reco="${o.estrategia === "equilibrada"}" data-sel="${sel}" aria-label="${e.nombre}: ${esc(o.proveedor)}">
+  return `<article class="card" data-est="${o.estrategia}" data-reco="${o.estrategia === "equilibrada"}" data-sel="${sel}" aria-label="${nombre}: ${esc(o.proveedor)}">
     <div class="c-top">
-      <div class="c-est">${ICONOS[o.estrategia]}${e.nombre}${o.estrategia === "equilibrada" ? '<span class="c-reco">Recomendada</span>' : ""}</div>
+      <div class="c-est">${iconoDe(o)}${nombre}${o.estrategia === "equilibrada" ? '<span class="c-reco">Recomendada</span>' : ""}</div>
       <h3 class="c-prov">${esc(o.proveedor)}</h3>
     </div>
     <div class="c-exito"><div class="big num" title="Probabilidad de que salga bien: a tiempo, sin daño y dentro del presupuesto">${pct0(o.p_exito)}<small>de éxito</small></div>${SemaforoRiesgo(o.semaforo)}</div>
@@ -170,7 +174,7 @@ export function GraficoCostoP90(ranking, estrategias, plazo) {
     }).join("")}
     <text x="${(W + m.l) / 2}" y="${H - 2}" text-anchor="middle">Tiempo hasta el que llega (más a la izquierda es más rápido)</text>
   </svg>
-  <div class="leyenda"><span><i style="background:#1b6c80"></i>Equilibrada</span><span><i style="background:#131416"></i>Más económica</span><span><i style="background:#626a70"></i>Más confiable</span><span><i style="background:#fff;border:1.5px solid #626a70"></i>Otras del ranking</span></div>`;
+  <div class="leyenda">${Object.values(estrategias).map((o) => `<span><i style="background:${marca[o.estrategia]}"></i>${nombreDe(o)}</span>`).join("")}<span><i style="background:#fff;border:1.5px solid #626a70"></i>Otras del ranking</span></div>`;
 }
 
 export function CartaControl(carta) {

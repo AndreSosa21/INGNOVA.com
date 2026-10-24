@@ -2,7 +2,7 @@
 // con el dato citado y, cuando corresponde, un botón que modifica el dashboard.
 import { Api } from "./api.js";
 import { esc, cop, pct0, pct, dec, sinTildes, corto } from "./fmt.js";
-import { sacrificios, ESTRATEGIAS } from "./componentes.js";
+import { sacrificios, nombreDe } from "./componentes.js";
 
 const $ = (s) => document.querySelector(s);
 const NUM = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5 };
@@ -113,7 +113,7 @@ export function crearCopiloto(ctx) {
       lineas.push("Nadie cumple solo. No cambio nada por mi cuenta.");
     } else {
       const med = Object.values(S.data.estrategias).filter((o) => o.semaforo !== "verde");
-      if (med.length) med.slice(0, 3).forEach((o) => lineas.push(`${corto(o.proveedor)} (${ESTRATEGIAS[o.estrategia].nombre.toLowerCase()}): ${o.senales[0] ?? "riesgo " + o.semaforo}.`));
+      if (med.length) med.slice(0, 3).forEach((o) => lineas.push(`${corto(o.proveedor)} (${nombreDe(o).toLowerCase()}): ${o.senales[0] ?? "riesgo " + o.semaforo}.`));
       else lineas.push("Las tres opciones están en verde. No veo nada que te frene.");
       nota = "Decides tú; yo explico y simulo.";
     }

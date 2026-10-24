@@ -28,7 +28,10 @@ app = FastAPI(title="Copiloto de asignación · COSCO")
 def _precargar():
     precargar()
 
-ESTRATEGIAS = (("equilibrada", None), ("economica", "Costo"), ("confiable", "Crítico"))
+ETIQUETAS = {"equilibrada": "Equilibrada", "economica": "Más económica", "confiable": "Más confiable"}
+MIN_AHORRO = 0.02              # "Más económica" ahorra al menos 2 % frente a la recomendada
+MAX_PERDIDA_ECONOMICA = 0.20   # ... y no pierde más de 20 puntos de éxito
+MIN_GANANCIA_CONFIABLE = 0.02  # "Más confiable" supera a la recomendada por al menos 2 puntos de éxito
 
 
 class Consulta(BaseModel):
@@ -66,20 +69,32 @@ class Cierre(BaseModel):
 
 
 def _estrategias(solicitud: dict, requisitos: list[dict]) -> dict:
-    """Corre el embudo con los tres perfiles y elige una opción distinta por estrategia."""
+    """Una sola corrida del embudo; las tres tarjetas salen de su ranking y cada etiqueta se mide, no se supone.
+
+    La equilibrada es el #1. "Más económica" es la más barata que ahorra de verdad sin perder más de
+    MAX_PERDIDA_ECONOMICA de éxito; "Más confiable", la de mayor éxito si supera al #1 por al menos
+    MIN_GANANCIA_CONFIABLE. Si nadie lo cumple, la tarjeta se llena con la siguiente del ranking como "Alternativa".
+    """
     base = api.consultar_ranking(solicitud, requisitos)
-    resultado = {"respuesta": base, "estrategias": {}, "perfiles": {}}
+    resultado = {"respuesta": base, "estrategias": {}, "perfiles": {"equilibrada": base["pesos"]}}
     if base["sin_opcion"]:
         return resultado
-    usados: set[str] = set()
-    for clave, perfil in ESTRATEGIAS:
-        r = base if perfil is None else api.consultar_ranking(dict(solicitud, perfil=perfil), requisitos)
-        elegido = next((o for o in r["ranking"] if o["proveedor"] not in usados and not o.get("dominado_por")), None)
-        if elegido is None:
-            continue
-        usados.add(elegido["proveedor"])
-        resultado["estrategias"][clave] = dict(elegido, estrategia=clave, coincide_con_primera=elegido["posicion"] != 1)
-        resultado["perfiles"][clave] = r["pesos"]
+    opciones = [o for o in base["ranking"] if not o.get("dominado_por")]
+    eq, resto = opciones[0], opciones[1:]
+    baratas = [o for o in resto if o["costo_esperado_cop"] < eq["costo_esperado_cop"] * (1 - MIN_AHORRO)
+               and o["p_exito"] >= eq["p_exito"] - MAX_PERDIDA_ECONOMICA]
+    eco = min(baratas, key=lambda o: o["costo_esperado_cop"]) if baratas else None
+    confiables = [o for o in resto if o is not eco and o["p_exito"] >= eq["p_exito"] + MIN_GANANCIA_CONFIABLE]
+    conf = max(confiables, key=lambda o: (o["p_exito"], o["puntaje"])) if confiables else None
+    libres = (o for o in resto if o is not eco and o is not conf)
+    for clave, o in (("equilibrada", eq), ("economica", eco), ("confiable", conf)):
+        etiqueta = ETIQUETAS[clave]
+        if o is None:
+            o, etiqueta = next(libres, None), "Alternativa"
+            if o is None:
+                continue
+        resultado["estrategias"][clave] = dict(o, estrategia=clave, etiqueta=etiqueta,
+                                               coincide_con_primera=o["posicion"] != 1)
     return resultado
 
 

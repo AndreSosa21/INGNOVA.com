@@ -56,7 +56,7 @@ baja ×0,5, ninguna 0) o un peso numérico. Después se renormalizan los pesos.
 | Orden y bandido | `ranking.ordenar` | no dominados por puntaje; los de alerta crítica después. Thompson desempata a menos de 5 % del primero, nunca en carga crítica |
 | Explicación | `ranking.razones`, `diferencia`, `contrafactual` | 2 razones por proveedor, "por qué no el #2" por factor y "si B bajara su precio X %…" |
 | Carga dividida | `ranking.dividir` | si alguien tiene cupo parcial: reparte en orden de puntaje (máx. 3). El éxito conjunto exige que todos cumplan |
-| Cascada | `ranking.cascada` | si nadie pasa: vehículo alterno, mover la fecha, ampliar plazo, subir precio, bajar confiabilidad, aceptar incidentes, cada uno solo, con o sin dividir. Nunca relaja por su cuenta |
+| Cascada | `ranking.cascada` | también corre si el mejor tiene menos de 60 % de éxito: entonces solo propone cambios que lo suben 10 puntos o más, e incluye ampliar el plazo y el presupuesto del cliente. Si nadie pasa: vehículo alterno, mover la fecha, ampliar plazo, subir precio, bajar confiabilidad, aceptar incidentes, cada uno solo, con o sin dividir. Nunca relaja por su cuenta |
 
 ## Perfiles
 

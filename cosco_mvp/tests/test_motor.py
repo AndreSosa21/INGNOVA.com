@@ -85,6 +85,37 @@ def test_las_30_solicitudes_de_prueba_responden(d):
         assert r["top3"] or r["alternativas"], sid
 
 
+def test_las_etiquetas_de_las_tarjetas_son_ciertas(d, monkeypatch):
+    from cosco import server
+    monkeypatch.setattr(server.api, "consultar_ranking", lambda s, r: calcular(d, s, r, n=1000).a_dict())
+    for sid in d.solicitudes[d.solicitudes.fase == "prueba"].index:
+        e = server._estrategias(int(sid), [])["estrategias"]
+        if not e:
+            continue
+        eq = e["equilibrada"]
+        assert len({o["proveedor"] for o in e.values()}) == len(e), sid
+        if e.get("economica", {}).get("etiqueta") == "Más económica":
+            assert e["economica"]["costo_esperado_cop"] < eq["costo_esperado_cop"], sid
+        if e.get("confiable", {}).get("etiqueta") == "Más confiable":
+            assert e["confiable"]["p_exito"] > eq["p_exito"], sid
+
+
+def test_opcion_debil_propone_cambios_que_la_mejoran(d):
+    debiles = 0
+    for sid in d.solicitudes[d.solicitudes.fase == "prueba"].index:
+        r = calcular(d, int(sid), n=1000).a_dict()
+        if not r["top3"]:
+            continue
+        mejor = r["top3"][0]["p_exito"]
+        if r["carga_dividida"]:
+            assert r["carga_dividida"]["p_exito_conjunta"] >= mejor, sid
+        if mejor < 0.6:
+            debiles += 1
+            assert r["alternativas"], sid
+            assert all(a["p_exito_mejor"] is None or a["p_exito_mejor"] >= mejor + 0.1 for a in r["alternativas"]), sid
+    assert debiles  # los datos de prueba traen casos con presupuesto o plazo imposibles
+
+
 def test_decision_y_cierre_actualizan_el_bandido(tmp_path):
     if not BD.exists():
         pytest.skip("falta data/cosco.db")

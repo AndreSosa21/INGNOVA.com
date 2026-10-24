@@ -44,5 +44,10 @@ servicios_minimos = 15          # pocos datos: menos servicios que esto en el se
 concentracion_max = 0.30        # participación en los últimos 90 días
 servicios_minimos_critico = 10  # en carga crítica no se recomienda a quien tenga menos
 
+[cascada]
+exito_debil = 0.60              # si el mejor tiene menos éxito que esto, también se buscan cambios que lo mejoren
+mejora_minima = 0.10            # un cambio solo se propone si sube el éxito al menos 10 puntos
+division_exito_minimo = 0.10    # una carga dividida con menos éxito conjunto que esto no se muestra
+
 [fechas]
 hoy = 2026-10-24                # fecha de corte de los datos simulados
