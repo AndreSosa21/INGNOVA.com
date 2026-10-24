@@ -24,6 +24,15 @@ WEB = Path(__file__).resolve().parent.parent / "web"
 app = FastAPI(title="Copiloto de asignación · COSCO")
 
 
+@app.middleware("http")
+async def _sin_cache(request, call_next):
+    """Los JS/CSS se revalidan siempre: sin esto, tras un despliegue el navegador sigue con el main.js viejo."""
+    resp = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 @app.on_event("startup")
 def _precargar():
     precargar()
