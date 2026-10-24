@@ -1,0 +1,76 @@
+/* Tokens compartidos por el dashboard (8001) y el portal (8002). Estilo "framed sheet": un marco con tinte azul-gris
+   (el del mar y el cemento del puerto) y una hoja blanca encima. Un solo color de acción; verde, amarillo y rojo solo para riesgo. */
+:root {
+  --frame: #eef3f6;
+  --surface: #ffffff;
+  --raised: #f4f7f9;
+  --active: #e6ecf0;
+  --border: #e3e8ec;
+  --rule: #eef1f3;
+  --control: #c9d0d6;
+  --text: #131416;
+  --muted: #565c61;
+  --faint: #626a70;
+  --accent: #1b6c80;
+  --accent-ink: #ffffff;
+  --accent-deep: #14566a;
+  --accent-tint: #e4f0f3;
+  --ok: #1e7b4f;   --ok-bg: #dcf3e5;
+  --warn: #8a4b0b; --warn-bg: #fdf0d3;
+  --bad: #b3261e;  --bad-bg: #fde8e6;
+  --font: "IBM Plex Sans", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 8px;
+  --radius-control: 6px;
+  --radius-sheet: 16px;
+  --gap: 24px;
+  --pad: 24px;
+  --control-h: 36px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light; }
+body { margin: 0; background: var(--frame); color: var(--text); font: 400 14px/1.5 var(--font); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4, p, ul, dl, dd { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+.btn {
+  height: var(--control-h); padding: 0 16px; border-radius: var(--radius-control); border: 1px solid var(--control);
+  background: var(--surface); color: var(--text); font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  text-decoration: none; transition: transform 120ms var(--ease), background 150ms var(--ease);
+}
+.btn:hover { background: var(--raised); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { background: var(--accent-deep); }
+.btn.small { height: 30px; padding: 0 12px; font-weight: 400; }
+.btn.ghost { border-color: transparent; background: none; color: var(--accent); padding: 0 8px; }
+.btn.ghost:hover { background: var(--accent-tint); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+select, input[type="text"], input[type="number"], input[type="date"], input[type="email"], textarea {
+  height: var(--control-h); border: 1px solid var(--control); background: var(--surface); border-radius: var(--radius-control); padding: 0 12px; min-width: 0; width: 100%;
+}
+textarea { height: auto; padding: 10px 12px; resize: vertical; }
+label { font-size: 13px; color: var(--muted); }
+
+.semaforo { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.semaforo svg { width: 10px; height: 10px; }
+.semaforo[data-s="verde"] { background: var(--ok-bg); color: var(--ok); }
+.semaforo[data-s="amarillo"] { background: var(--warn-bg); color: var(--warn); }
+.semaforo[data-s="rojo"] { background: var(--bad-bg); color: var(--bad); }
+
+.pasos { display: flex; align-items: center; gap: 0; list-style: none; padding: 0; margin: 0; flex-wrap: wrap; }
+.pasos li { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 13px; }
+.pasos li + li::before { content: ""; width: 24px; height: 2px; background: var(--active); margin: 0 10px; border-radius: 1px; }
+.pasos li i { width: 10px; height: 10px; border-radius: 50%; background: var(--active); display: block; }
+.pasos li[data-estado="hecho"] { color: var(--text); }
+.pasos li[data-estado="hecho"] i { background: var(--text); }
+.pasos li[data-estado="actual"] { color: var(--text); font-weight: 600; }
+.pasos li[data-estado="actual"] i { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-tint); }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

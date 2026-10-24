@@ -41,6 +41,22 @@ Sin `.env`, todo sigue funcionando con SQLite local, que sirve de respaldo para 
 
 Más detalle en [docs/modelo_datos.md](docs/modelo_datos.md).
 
+## Portal del cliente y dashboard del equipo (dos aplicaciones, misma BD)
+
+```bash
+python -m uvicorn cosco.server:app --port 8001          # dashboard del equipo logístico  http://localhost:8001
+python -m uvicorn cosco.portal_server:app --port 8002   # portal del cliente             http://localhost:8002
+```
+
+Flujo: el cliente pide en el portal (3 pasos) -> la solicitud llega sola a la bandeja del dashboard (sondeo cada 3 s) ->
+al abrirla pasa a "En análisis" -> el equipo compara tres opciones (Equilibrada, Más económica, Más confiable) y elige ->
+el portal del cliente muestra "Asignada". Las solicitudes viven en `solicitudes` (fase `operacion`) y los datos de contacto en
+`solicitudes_portal` (se crea sola, o con `python -m cosco.db.migrar`). `cosco/solicitudes.py` tiene la lógica compartida.
+
+`cosco/server.py` expone `cosco.motor.api` por HTTP y calcula las tres estrategias (mismo motor, perfiles Urgente/Costo/Crítico).
+`web/` y `portal/` son front sin paso de build; la UI no calcula nada, solo consume el contrato del motor. Elegir un proveedor
+escribe en `decisiones` de la BD configurada. El portal usa una foto con licencia CC BY 3.0 (crédito en su pie).
+
 ## Memoria del asistente con búsqueda semántica (pgvector)
 
 Solo para Supabase. Agrega la columna `embedding` a `casos_memoria` y la llena, **sin tocar los demás datos**:

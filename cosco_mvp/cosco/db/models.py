@@ -316,3 +316,15 @@ class EstadoBandit(Base):
     alfa: Mapped[float] = mapped_column(Float)
     beta: Mapped[float] = mapped_column(Float)
     actualizado: Mapped[datetime] = mapped_column(DateTime)
+
+
+class SolicitudPortal(Base):
+    """Datos que el cliente escribió en el portal: quién pide y cuándo llegó. La solicitud en sí vive en `solicitudes`."""
+
+    __tablename__ = "solicitudes_portal"
+    solicitud_id: Mapped[int] = mapped_column(ForeignKey("solicitudes.id"), primary_key=True)
+    creada: Mapped[datetime] = mapped_column(DateTime, index=True)
+    contacto: Mapped[str] = mapped_column(String(120))
+    empresa: Mapped[str | None] = mapped_column(String(120))
+    email: Mapped[str | None] = mapped_column(String(120))
+    notas: Mapped[str | None] = mapped_column(Text)

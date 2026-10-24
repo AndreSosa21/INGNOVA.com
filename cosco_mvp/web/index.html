@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asignación de transporte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <nav class="rail" aria-label="Pantallas">
+    <svg class="mark" width="28" height="28" viewBox="0 0 28 28" role="img" aria-label="Copiloto de asignación">
+      <rect x="2" y="5" width="24" height="18" rx="6" fill="#131416"/><circle cx="10" cy="14" r="2.2" fill="#fff"/><circle cx="18" cy="14" r="2.2" fill="#fff"/>
+    </svg>
+    <a href="/" data-tip="Solicitudes" aria-label="Solicitudes" aria-current="page">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/><circle cx="18" cy="16" r="3"/></svg></a>
+    <a href="#" data-tip="Gerencia (siguiente entrega)" aria-label="Gerencia, siguiente entrega" aria-disabled="true" tabindex="-1" style="opacity:.45;pointer-events:none">
+      <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></a>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="crumb"><strong>Asignación de transporte</strong> · Operaciones Colombia</span>
+      <span class="grow"></span>
+      <label class="sr-only" for="estado-datos">Estado de los datos</label>
+      <select id="estado-datos" title="Para probar cómo se ve cada estado">
+        <option value="normal">Datos: normal</option><option value="cargando">Datos: cargando</option>
+        <option value="vacio">Datos: vacío</option><option value="error">Datos: error</option>
+      </select>
+      <button class="copiloto-btn" id="abrir-copiloto" aria-expanded="false" aria-controls="panel-copiloto">
+        <svg class="av" width="22" height="22" data-estado="reposo" viewBox="0 0 28 28" aria-hidden="true"><rect class="cuerpo" x="2" y="5" width="24" height="18" rx="6"/><circle class="dos" cx="10" cy="14" r="2.2"/><circle class="dos" cx="18" cy="14" r="2.2"/></svg>
+        Copiloto <span class="dot-n" id="n-alertas" hidden>0</span>
+      </button>
+    </header>
+    <div class="sheet" id="sheet" data-vista="lista">
+      <section class="lista" aria-label="Solicitudes" id="lista"></section>
+      <main class="detalle" id="detalle" aria-live="polite"></main>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="cajon" id="cajon" aria-label="Detalle de la opción" data-open="false"></aside>
+
+<aside class="panel-copiloto" id="panel-copiloto" aria-label="Copiloto" data-open="false">
+  <div class="pc-head">
+    <svg class="av" id="av-panel" data-estado="reposo" viewBox="0 0 28 28" aria-hidden="true"><rect class="cuerpo" x="2" y="5" width="24" height="18" rx="6"/><circle cx="10" cy="14" r="2.2"/><circle cx="18" cy="14" r="2.2"/><circle class="tres" cx="14" cy="14" r="2.2"/></svg>
+    <div><h2>Copiloto</h2><div class="sub" id="av-estado-txt">En reposo. Explica y simula; no asigna.</div></div>
+    <button class="x" id="cerrar-copiloto" aria-label="Cerrar Copiloto"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="pc-body" id="pc-body"></div>
+  <div class="pc-foot">
+    <div class="preguntas" id="pc-sugeridas"></div>
+    <form id="pc-form"><input type="text" id="pc-input" placeholder="Pregunta o pega el correo del cliente" aria-label="Pregunta al Copiloto" autocomplete="off"><button class="btn primary" type="submit">Enviar</button></form>
+  </div>
+</aside>
+
+<dialog id="dlg-elegir">
+  <form method="dialog" id="form-elegir">
+    <h2 id="elegir-titulo">Elegir proveedor</h2>
+    <p class="muted" id="elegir-resumen"></p>
+    <div><label for="elegir-motivo">Motivo <span id="elegir-oblig"></span></label>
+    <textarea id="elegir-motivo" rows="3"></textarea></div>
+    <div class="err" id="elegir-err" role="alert"></div>
+    <div class="dialog-btns"><button class="btn" type="button" id="elegir-cancelar">Cancelar</button><button class="btn primary" type="submit" id="elegir-ok">Confirmar asignación</button></div>
+  </form>
+</dialog>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
